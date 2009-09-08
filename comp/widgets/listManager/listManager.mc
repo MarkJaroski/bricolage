@@ -322,6 +322,7 @@ $objs           => undef        # These are user objects to be listed.
 $def_sort_field => undef
 $def_sort_order => undef        # Whether to sort in descending order by default
 $cx_filter      => 1            # Make false to override Filter by Site Context.
+$show_count     => 0            # Show the total number of objects found
 </%args>
 <%init>;
 
@@ -448,6 +449,11 @@ my ($rows, $cols, $data, $actions) = $build_table_data->(
     $offset,
     $pagination
 );
+
+if ($show_count) {
+    my $count_label = $lang->maketext('Total found: ');
+    $m->out(qq{<div class="addnewitem"><b>$count_label</b>$count</div>});
+}
 
 # Call the element to show this list
 $m->comp("$style.mc",

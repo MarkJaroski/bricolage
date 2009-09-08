@@ -130,9 +130,9 @@ my @PROPS = qw(id name type user_id sched_time priority comp_time tries
                _class_id _failed);
 my @ORD = @PROPS[1..$#PROPS - 6];
 
-my $SEL_COLS = 'a.id, a.name, a.expire, a.usr__id, a.sched_time, a.priority, '
-  . 'a.comp_time, a.tries, a.error_message, a.executing, a.story_instance__id, '
-  . 'a.media_instance__id, a.class__id, a.failed, m.grp__id';
+my $SEL_COLS = 'job.id, job.name, job.expire, job.usr__id, job.sched_time, job.priority, '
+  . 'job.comp_time, job.tries, job.error_message, job.executing, job.story_instance__id, '
+  . 'job.media_instance__id, job.class__id, job.failed, member.grp__id';
 my @SEL_PROPS = (@PROPS, 'grp_ids');
 
 my @SCOL_ARGS = ('Bric::Util::Coll::ServerType', '_server_types');
@@ -2012,24 +2012,29 @@ B<Notes:> NONE.
 
 $get_em = sub {
     my ($pkg, $params, $ids, $href) = @_;
-    my $tables = 'job a, member m, job_member c';
-    my $wheres = 'a.id = c.object_id AND m.id = c.member__id AND ' .
-      "m.active = '1'";
+    my $tables = qq{
+        job
+            JOIN job_member
+                ON job.id = job_member.object_id
+            JOIN member
+                ON member.id = job_member.member__id
+    };
+    my $wheres = "member.active = 't'";
     my @params;
     my %map = (
-        id                => 'a.id = ?',
-        _class_id         => 'a.class__id = ?',
-        media_instance_id => 'a.media_instance__id = ?',
-        story_instance_id => 'a.story_instance__id = ?',
-        user_id           => 'a.usr__id = ?',
-        name              => 'LOWER(a.name) LIKE LOWER(?)',
-        error_message     => 'LOWER(a.error_message) LIKE LOWER(?)',
+        id                => 'job.id = ?',
+        _class_id         => 'job.class__id = ?',
+        media_instance_id => 'job.media_instance__id = ?',
+        story_instance_id => 'job.story_instance__id = ?',
+        user_id           => 'job.usr__id = ?',
+        name              => 'LOWER(job.name) LIKE LOWER(?)',
+        error_message     => 'LOWER(job.error_message) LIKE LOWER(?)',
     );
 
     my %bool = (
-        type      => 'a.expire = ?',
-        failed    => 'a.failed = ?',
-        executing => 'a.executing = ?',
+        type      => 'job.expire = ?',
+        failed    => 'job.failed = ?',
+        executing => 'job.executing = ?',
     );
 
     while (my ($k, $v) = each %$params) {
@@ -2044,56 +2049,74 @@ $get_em = sub {
 
         elsif ($k eq 'server_type_id') {
             # Add job__server_type to the lists of tables and join to it.
-            $tables .= ', job__server_type js';
-            $wheres .= ' AND a.id = js.job__id AND '
-                    . any_where $v, 'js.server_type__id = ?', \@params;
+            $tables .= 'JOIN job__server_type ON job.id = js.job__id';
+            $wheres .= ' AND ' . any_where $v, 'js.server_type__id = ?', \@params;
         }
 
         elsif ($k eq 'story_id') {
             # Add story_instance to the lists of tables and join to it.
-            $tables .= ', story_instance si';
-            $wheres .= ' AND a.story_instance__id = si.id AND '
-                    . any_where $v, 'si.story__id = ?', \@params;
+            $tables .= 'JOIN story_instance 
+                            ON job.story_instance__id = story_instance.id';
+            $wheres .= ' AND ' . any_where $v, 'si.story__id = ?', \@params;
         }
 
         elsif ($k eq 'media_id') {
             # Add media_instance to the lists of tables and join to it.
-            $tables .= ', media_instance mi';
-            $wheres .= ' AND a.media_instance__id = mi.id AND '
-                    . any_where $v, 'mi.media__id = ?', \@params;
+            $tables .= 'JOIN media_instance 
+                            ON job.media_instance__id = media_instance.id';
+            $wheres .= ' AND ' . any_where $v, 'mi.media__id = ?', \@params;
+        }
+
+        elsif ($k eq 'uri') {
+            # The user shouldn't have to worry about which type of object
+            # has the URI.  So join on everything.
+            $tables .= q{ LEFT JOIN story_instance
+                              ON job.story_instance__id = story_instance.id
+                          LEFT JOIN media_instance
+                              ON job.media_instance__id = media_instance.id
+                          LEFT JOIN story_uri
+                              ON story_instance.story__id = story_uri.story__id
+                          LEFT JOIN media_uri
+                              ON media_instance.media__id = media_uri.media__id };
+            $wheres .= " AND ( story_uri.uri LIKE ? OR media_uri.uri LIKE ? )";
+            push @params, $v, $v;
+        }
+
+        elsif ($k eq 'username') {
+            # tokenizing the input would be nicer, but let's just do a
+            # search on the same name format we show the user
+            $tables .= 'JOIN person ON person.id = job.usr__id';
+            $wheres .= any_where $v, " AND LOWER( lname || ', ' || fname )" 
+                    ." LIKE LOWER(?)", \@params;
         }
 
         elsif ($k eq 'resource_id') {
             # Add job__resource to the lists of tables and join to it.
-            $tables .= ', job__resource jr';
-            $wheres .= ' AND a.id = jr.job__id AND '
-                    . any_where $v, 'jr.resource__id = ?', \@params;
+            $tables .= 'JOIN job__resource ON job.id = job__resource.job__id ';
+            $wheres .= ' AND ' . any_where $v, 'jr.resource__id = ?', \@params;
         }
 
         elsif ($k eq 'grp_id') {
             # Add in the group tables a second time and join to them.
-            $tables .= ', member m2, job_member c2';
-            $wheres .= ' AND a.id = c2.object_id AND c2.member__id = m2.id'
-                    . " AND m2.active = '1' AND "
-                    . any_where $v, 'm2.grp__id = ?', \@params;
+            $wheres .= ' AND ' . any_where $v, 'member.grp__id = ?', \@params;
         }
 
         else {
             # It's a date column.
             if (blessed $v) {
                 db_date($_) for @$v;
-                $wheres .= ' AND ' . any_where $v, "a.$k = ?", \@params;
+                $wheres .= ' AND ' . any_where $v, "job.$k = ?", \@params;
             }
 
             elsif (ref $v) {
                 # It's an arrayref of dates.
                 if (!defined $v->[0]) {
                     # It's less than.
-                    $wheres .= " AND a.$k < ?";
+                    $wheres .= " AND job.$k < ?";
                     push @params, db_date($v->[1]);
                 } elsif (!defined $v->[1]) {
                     # It's greater than.
-                    $wheres .= " AND a.$k > ?";
+                    $wheres .= " AND job.$k > ?";
                     push @params, db_date($v->[0]);
                 } else {
                     # It's between two sizes.
@@ -2102,18 +2125,18 @@ $get_em = sub {
                 }
             } elsif (!defined $v) {
                 # It needs to be null.
-                $wheres .= " AND a.$k IS NULL";
+                $wheres .= " AND job.$k IS NULL";
             } else {
                 # It's a single value.
                 $wheres .= ' AND '
-                        . any_where db_date($v), "a.$k = ?", \@params;
+                        . any_where db_date($v), "job.$k = ?", \@params;
             }
         }
     }
 
     # Assemble and prepare the query.
-    my ($qry_cols, $order) = $ids ? (\'DISTINCT a.id', 'a.id')
-                                  : (\$SEL_COLS, 'a.priority, a.sched_time, a.id')
+    my ($qry_cols, $order) = $ids ? (\'DISTINCT job.id', 'job.id')
+                                  : (\$SEL_COLS, 'job.priority, job.sched_time, job.id')
                                   ;
 
     my $sel = prepare_c(qq{

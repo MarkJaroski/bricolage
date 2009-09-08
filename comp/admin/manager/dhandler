@@ -9,6 +9,7 @@ my $obj_key = $type;
 my ($groupList, $constrain);
 my $behavior = $def->{$type}{behavior};
 my $searchType = 'dual';
+
 # Offer a list of groups to choose from, if this is a group manager.
 if ($type eq 'grp') {
     # Set the constraint.
@@ -79,67 +80,6 @@ if ($type eq 'grp') {
     $searchType = "triple";
 } elsif ($type eq 'category') {
     $searchType = 'singular';
-} elsif ($type eq 'job') {
-    my $jtype = $ARGS{jtype};
-    unless (defined $jtype) {
-        my $prev_state = get_state_data('search', 'job');
-        $jtype = $prev_state->{prev_type}
-          if defined $prev_state and exists $prev_state->{prev_type};
-    }
-
-    # Set the constraint.
-    $constrain = { %{ $def->{$type}{constrain} } };
-    if (exists $ARGS{'search|substr_cb'}) {
-#        $jtype = 'all';
-    } elsif ($jtype) {
-        # Constraint from dropdown
-        my $end_of_day_format = '%G-%m-%dT23:59:59';
-
-        if ($jtype eq 'expire') {
-            $constrain->{type} = 1;
-        } elsif ($jtype eq 'failed') {
-            $constrain->{failed} = 1;
-        } elsif ($jtype eq 'today') {
-            my $ltime = local_date(undef, $end_of_day_format, 1);
-            $constrain->{sched_time} = [undef, $ltime];
-        } elsif ($jtype eq 'future') {
-            my $ltime = local_date(undef, $end_of_day_format, 1);
-            $constrain->{sched_time} = [$ltime, undef];
-        } elsif ($jtype eq 'mine') {
-            $constrain->{user_id} = get_user_id();
-        }
-
-        my $prev_state = get_state_data('search', 'job');
-        $prev_state->{prev_type} = $jtype;
-        set_state_data('search', job => $prev_state);
-
-        $behavior = 'narrow';
-    } else {
-        # It's the first time accessing.
-        $jtype = 'all';
-    }
-
-    my %job_sel = (
-        'all'    => $lang->maketext("All jobs"),
-        'today'  => $lang->maketext("Today's jobs"),
-        'future' => $lang->maketext("Future jobs"),
-        'expire' => $lang->maketext("Expire jobs"),
-        'failed' => $lang->maketext("Failed jobs"),
-        'mine'   => $lang->maketext("My jobs"),
-    );
-    $groupList = $m->scomp('/widgets/profile/select.mc',
-                            disp => $lang->maketext('Or Pick a Type'),
-                            options => \%job_sel,
-                            indent  => 140,
-                            width   => 500,
-                            value => $jtype,
-                            js => qq{onChange="location.href='} . $r->uri .
-                                 "?jtype=' + " .
-                                 qq{escape(this.options[this.selectedIndex].value)"}
-                           );
-
-    # Set the type to the new value, if it has been submitted.
-    $searchType = 'triple';
 }
 
 $m->comp('/widgets/search/search.mc',
@@ -166,7 +106,7 @@ $m->comp('/widgets/listManager/listManager.mc',
     object => $obj_key,
     profile => $prof_sub,
     fields => @$sites > 1 ? $def->{$type}{list_fields} : [ grep $_ ne 'site', @{ $def->{$type}{list_fields} } ],
-    addition => $type eq 'pref' || $type eq 'job'
+    addition => $type eq 'pref' 
                 ? undef
                 : $obj_key eq 'contrib_type' ? $ct_add_sub : $add_sub,
     select => $def->{$type}{select},
@@ -181,23 +121,13 @@ $m->comp('/widgets/wrappers/table_bottom.mc');
 
 # Output the form closing tag if necessary.
 if (defined $def->{$type}{select} && $can_del) {
-    if ($type ne "job") {
-        $m->comp("/widgets/buttons/submit.mc",
-                  disp      => 'Delete Checked',
-                  name      => 'action',
-                  button    => 'delete_checked_red',
-                  useTable  => 0
-                );
-        $m->out(qq{\n</form>\n});
-    } else {
-        $m->comp("/widgets/buttons/submit.mc",
-                  disp      => "$sel_label Checked",
-                  name      => 'action',
-                  button    => 'cancel_checked_red',
-                  useTable  => 0
-                );
-        $m->out(qq{\n</form>\n});
-    }
+    $m->comp("/widgets/buttons/submit.mc",
+              disp      => 'Delete Checked',
+              name      => 'action',
+              button    => 'delete_checked_red',
+              useTable  => 0
+            );
+    $m->out(qq{\n</form>\n});
 }
 
 # Output the footer.
@@ -207,6 +137,7 @@ $m->comp('/widgets/wrappers/footer.mc', param => \%ARGS);
 ($can_del, $users, $ets) = ();
 </%perl>
 <%init>;
+
 # Figure out where we are.
 my ($section, $mode, $type) = parse_uri($r->uri);
 
@@ -220,10 +151,7 @@ my $context = "Admin | Manager | " . get_class_info($type)->get_plural_name;
 # Set the selection label and widget.
 $sel_label = 'Delete';
 
-if ($type eq 'job') {
-    $sel_label = 'Cancel';
-    $sel_widg = 'job|cancel_cb';
-} elsif ($type eq 'alert_type') {
+if ($type eq 'alert_type') {
     $sel_widg = 'alert_type|delete_cb';
 } elsif ($type eq 'workflow') {
     $sel_widg = 'workflow|delete_cb';
@@ -235,7 +163,7 @@ if ($type eq 'job') {
     $sel_widg = 'listManager|deactivate_cb';
 }
 
-$fmt = get_pref('List Name Format') if $type eq 'job' || $type eq 'alert_type';
+$fmt = get_pref('List Name Format') if $type eq 'alert_type';
 
 my $prefix = '';
 if ($type eq 'user') {
@@ -336,26 +264,6 @@ my $owner_sub = sub {
     my $uid = $_[0]->get_owner_id;
     my $u = $users->{$uid} ||= Bric::Biz::Person::User->lookup({ id => $uid });
     $u->format_name($fmt);
-};
-
-# For marking failed jobs as failed
-my $job_name_sub = sub {
-    my ($name, $job) = @_;
-    if ($job->has_failed) {
-        return qq{<span class="label required"><image src="/media/images/bang_red.gif" /> $name</span>};
-    } else {
-        return $name;
-    }
-};
-
-# Deals with the job type and class
-my $job_type_sub = sub {
-    my ($type, $job) = @_;
-    if (ref $job eq 'Bric::Util::Job::Dist') {
-        return $type ? 'Expire' : 'Deliver';
-    } else {
-        return 'Publish';
-    }
 };
 
 # Define the look and feel for each type of manager.
@@ -510,20 +418,6 @@ my $def = {
         alter => {
             publish => $yes_no,
             preview => $yes_no,
-        },
-    },
-    job => {
-        list_fields  => [qw(name type user_id sched_time)],
-        srch_field   => 'name',
-        behavior     => 'narrow',
-        title        => 'Pending %n',
-        constrain    => { comp_time => undef },
-        field_values => $usr_sub,
-        select       => $sel_sub,
-        sort_by      => 'sched_time',
-        alter => {
-            type => $job_type_sub,
-            name => $job_name_sub,
         },
     },
     site => {
