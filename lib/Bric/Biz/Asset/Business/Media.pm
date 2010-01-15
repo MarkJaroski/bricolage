@@ -1,9 +1,8 @@
 package Bric::Biz::Asset::Business::Media;
 
-# $Id$
 ###############################################################################
 
-=head1 NAME
+=head1 Name
 
 Bric::Biz::Asset::Business::Media - The parent class of all media objects
 
@@ -11,11 +10,11 @@ Bric::Biz::Asset::Business::Media - The parent class of all media objects
 
 require Bric; our $VERSION = Bric->VERSION;
 
-=head1 SYNOPSIS
+=head1 Synopsis
 
   use Bric::Biz::Asset::Business::Media;
 
-=head1 DESCRIPTION
+=head1 Description
 
 Media contains all of the data that will result in published media files. It
 contains the metadata and associations with media documents. It inherits from
@@ -405,7 +404,7 @@ BEGIN {
 # Interface Methods                    #
 #======================================#
 
-=head1 INTERFACE
+=head1 Interface
 
 =head2 Constructors
 
@@ -773,8 +772,10 @@ May use C<ANY> for a list of possible values.
 =item data_text
 
 Text stored in the fields of the media element or any of its subelements. Only
-fields that use the "short" storage type will be searched. May use C<ANY> for
-a list of possible values.
+fields that use the "short" storage type will be searched unless the
+C<BLOB_SEARCH> F<bricolage.conf> directive is enabled, in which case the
+"blob" storage will also be searched. May use C<ANY> for a list of possible
+values.
 
 =item simple
 
@@ -2378,16 +2379,16 @@ __END__
 
 =back
 
-=head1 NOTES
+=head1 Notes
 
 Some additional fields may be needed here such as a field for what kind of
 object this represents etc.
 
-=head1 AUTHOR
+=head1 Author
 
 "Michael Soderstrom" E<lt>miraso@pacbell.netE<gt>
 
-=head1 SEE ALSO
+=head1 See Also
 
 L<perl>, L<Bric>, L<Bric::Biz::Asset>, L<Bric::Biz::Asset::Business>
 

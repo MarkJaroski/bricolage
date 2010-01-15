@@ -1,9 +1,8 @@
 package Bric::Biz::Asset::Business;
 
-# $Id$
 ###############################################################################
 
-=head1 NAME
+=head1 Name
 
 Bric::Biz::Asset::Business - An object that houses the business Assets
 
@@ -11,7 +10,7 @@ Bric::Biz::Asset::Business - An object that houses the business Assets
 
 require Bric; our $VERSION = Bric->VERSION;
 
-=head1 SYNOPSIS
+=head1 Synopsis
 
  # Constructor
  $biz = Bric::Biz::Asset::Business->new($param);
@@ -88,7 +87,7 @@ require Bric; our $VERSION = Bric->VERSION;
  ($grps || @grps) = $asset->get_grp_ids()
 
 
-=head1 DESCRIPTION
+=head1 Description
 
 This is the parent class for all the documents, including
 L<stories|Bric::Biz::Asset::Business::Story> and L<media
@@ -210,7 +209,7 @@ BEGIN {
 
 #=============================================================================#
 
-=head1 INTERFACE
+=head1 Interface
 
 =head2 Constructors
 
@@ -888,12 +887,12 @@ sub get_contributors {
     if (my @objs_needed = grep { !$contribs->{$_}->{obj} } keys %$contribs) {
         $contribs->{$_->get_id}->{obj} = $_ for Bric::Util::Grp::Parts::Member::Contrib->list({ id => ANY(@objs_needed) });
     }
-    
+
     my @ret;
-    push @ret, $contribs->{$_}->{obj} for 
+    push @ret, $contribs->{$_}->{obj} for
         sort { $contribs->{$a}->{place} <=> $contribs->{$b}->{place} }
         keys %$contribs;
-        
+
     return wantarray ? @ret : \@ret;
 }
 
@@ -1016,7 +1015,7 @@ sub reorder_contributors {
         if (exists $existing->{$_}) {
             unless ($existing->{$_}->{'place'} == $i) {
                 $existing->{$_}->{'place'} = $i;
-                $existing->{$_}->{'action'} = 'update' 
+                $existing->{$_}->{'action'} = 'update'
                   unless $existing->{$_}->{'action'} eq 'insert';
             }
                         $i++;
@@ -1583,6 +1582,38 @@ B<Notes:> NONE.
 =cut
 
 sub get_publish_date { local_date($_[0]->_get('publish_date'), $_[1]) }
+
+################################################################################
+
+=item $self = $story->mark_as_published
+
+    $doc->mark_as_published;
+    $doc->save;
+
+If the document is not already marked as published, this method does so,
+setting the publish status and publish date and saving the story. Use with
+caution, since this method does not actually publish the document (no jobs are
+created and no templates are executed).
+
+B<Throws:> NONE.
+
+B<Side Effects:> Sets the C<publish_status> to true and the C<publish_date> to
+the current date and time, unless the document is already marked as published.
+The setting of <publish_date> causes the C<first_publish_date> to be set to
+the same date.
+
+B<Notes:> This method is usually used when you have sucked the content of the
+asset into something else that you are really publishing and want this asset
+to be marked as published without creating any content on its own.
+
+=cut
+
+sub mark_as_published {
+    my $self = shift;
+    return if $self->get_publish_status;
+    $self->set_publish_status(1);
+    $self->set_publish_date( local_date(undef, undef, 1) );
+}
 
 ################################################################################
 
@@ -2256,7 +2287,7 @@ sub _check_uri_table {
 
 =back
 
-=head2 PRIVATE
+=head2 Private
 
 =cut
 
@@ -2865,17 +2896,16 @@ __END__
 
 =back
 
-=head1 NOTES
+=head1 Notes
 
 NONE
 
-=head1 AUTHOR
+=head1 Author
 
 michael soderstrom <miraso@pacbell.net>
 
-=head1 SEE ALSO
+=head1 See Also
 
 L<Bric>, L<Bric::Biz::Asset>
 
 =cut
-

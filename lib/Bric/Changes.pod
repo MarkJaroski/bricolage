@@ -1,12 +1,12 @@
-=head1 NAME
+=head1 Name
 
 Bric::Changes - Bricolage Changes
 
-=head1 DESCRIPTION
+=head1 Description
 
 This document lists the Changes to Bricolage introduced with each release.
 
-=head1 VERSION 1.11.2 (2008-??-??)
+=head1 Version 1.11.2 (2008-??-??)
 
 =head2 New Features
 
@@ -38,9 +38,8 @@ Added support for copying and pasting elements in the story profile.
 Added the C<find_or_create_alternate()> method to
 L<Bric::Biz::Asset::Business::Media|Bric::Biz::Asset::Business::Media> class.
 This method makes it easy for templates to create alternate representations of
-an image as a new media document as a new media document. Useful for
-generating thumbnails and the like. As a side-effect, L<Imager|Imager> is now
-a required module. [David]
+an image as a new media document. Useful for generating thumbnails and the 
+like. As a side-effect, L<Imager|Imager> is now a required module. [David]
 
 =item *
 
@@ -168,6 +167,30 @@ Made the popup dialog for related stories/media a bit bigger. [Scott]
 =item *
 
 Added a throbber to category completion in New Story and Story Profile. [Scott]
+
+=item *
+
+Added 'Bricolage events feed generator' (F<contrib/bric_events_rss>) to
+contribs. Generates RSS output for all system events. [Greg Heo]
+
+=item *
+
+Renamed F<Makefile> to F<Makefile.in> and changed C<Makefile.PL> so that it
+creates F<Makefile> from F<Makefile.in>. This is so that F<Makefile> is no
+longer changed in-place, which could get annoying when doing development.
+[David]
+
+=item *
+
+Added C<mark_as_published()> method to
+L<Bric::Biz::Asset::Business|Bric::Biz::Asset::Business>. This method marks a
+document as published but does not create jobs or resources and no templates
+will be executed. [Paul Orrock]
+
+=item *
+
+Added the C<timeout> attribute to L<Bric::Dist::Client|Bric::Dist::Client> and
+the corresponding C<-t> option to L<bric_dist_mon|bric_dist_mon>. [David]
 
 =back
 
@@ -502,9 +525,17 @@ Fixed bug 1464: URLs weren't wrapping properly in IE. [Adrian]
 
 Fixed bug 1466: the Checkout icon wasn't working on desks in IE. [Scott]
 
+=item *
+
+Response error handling in L<Bric::Dist::Client|Bric::Dist::Client>, which is
+used by F<bric_dist_mon>, now properly checks the error status before looking
+to see if the response is from a proper distribution handler URL. This makes
+it easier to see what problems there are in a failed response, rather than
+just bailing without any useful information. [David]
+
 =back
 
-=head1 VERSION 1.11.1 (2008-10-03)
+=head1 Version 1.11.1 (2008-10-03)
 
 =head2 Improvements
 
@@ -681,7 +712,7 @@ Ipenburg (Bug #1359). [David]
 
 =back
 
-=head1 VERSION 1.11.0 (2008-04-30)
+=head1 Version 1.11.0 (2008-04-30)
 
 =head2 New Features
 
@@ -878,22 +909,27 @@ to install files in their proper locations. [Brian Smith and David]
 
 =back
 
-=head1 VERSION 1.10.8 ()
+=head1 Version 1.10.8 ()
 
 =head2 Bug Fixes
 
 =over
 
-=item
+=item *
 
 Fixed a compatibility issue in Bric::Dist::Action::DTDValidate. Apparently
 C<get_last_error()> was removed from L<XML::LibXML|XML::LibXML> 1.59 "for
 thread-saftey reasons." This change backward-compatible with older versions of
 XML::LibXML. [David]
 
+=item *
+
+Fixed a bug where a story published but with no resources (files) could cause
+an error. Reported by Paul Hyland. [David]
+
 =back
 
-=head1 VERSION 1.10.7 (2009-03-12)
+=head1 Version 1.10.7 (2009-03-12)
 
 =head2 Improvements
 
@@ -1046,7 +1082,7 @@ The C<bric_media_upload> app works again. [David]
 
 =back
 
-=head1 VERSION 1.10.6 (2008-10-02)
+=head1 Version 1.10.6 (2008-10-02)
 
 =head2 Improvements
 
@@ -1213,7 +1249,7 @@ when pagination is turned on. Reported by Matt Rolf (Bug #150). [David]
 
 =back
 
-=head1 VERSION 1.10.5 (2008-04-29)
+=head1 Version 1.10.5 (2008-04-29)
 
 =head2 Improvements
 
@@ -1461,7 +1497,7 @@ checks the "Use SSL" checkbox and logs in. [David]
 
 =back
 
-=head1 VERSION 1.10.4 (2008-03-09)
+=head1 Version 1.10.4 (2008-03-09)
 
 =head2 Improvements
 
@@ -1622,7 +1658,7 @@ database permissions. [Alex Krohn]
 
 =back
 
-=head1 VERSION 1.10.3 "Finally" (2007-08-09)
+=head1 Version 1.10.3 "Finally" (2007-08-09)
 
 =head2 Improvements
 
@@ -1979,7 +2015,7 @@ Fixed contributor type creation (bug 1299). [Greg Heo]
 
 =back
 
-=head1 VERSION 1.10.2 "Summer" (2006-06-22)
+=head1 Version 1.10.2 "Summer" (2006-06-22)
 
 =head2 Improvements
 
@@ -2315,7 +2351,7 @@ to the search for stories and media in general. [David]
 
 =back
 
-=head1 VERSION 1.10.1 (2006-03-20)
+=head1 Version 1.10.1 (2006-03-20)
 
 =head2 New Features
 
@@ -2594,7 +2630,7 @@ name, to be consistent with the template profile. Reported by Marshall.
 
 =back
 
-=head1 VERSION 1.10.0 (2006-01-23)
+=head1 Version 1.10.0 (2006-01-23)
 
 =head2 Improvements
 
@@ -2687,7 +2723,7 @@ Updated the context-sensitive online help avaialable by clicking the
 
 ##############################################################################
 
-=head1 VERSION 1.9.1 "Peeves" (2005-10-28)
+=head1 Version 1.9.1 "Peeves" (2005-10-28)
 
 =head2 New Features
 
@@ -3284,7 +3320,7 @@ that of Mason and Template Toolkit templates. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.9.0 "Punkin" (2005-08-19)
+=head1 Version 1.9.0 "Punkin" (2005-08-19)
 
 =head2 New Features
 
@@ -3681,7 +3717,7 @@ Updated search documentation and wrote tests for:
 
 ##############################################################################
 
-=head1 VERSION 1.8.11 (2006-06-19)
+=head1 Version 1.8.11 (2006-06-19)
 
 =head2 Improvements
 
@@ -3848,7 +3884,7 @@ from its return value. [David]
 
 =back
 
-=head1 VERSION 1.8.10 (2006-03-16)
+=head1 Version 1.8.10 (2006-03-16)
 
 =head2 Improvements
 
@@ -3957,7 +3993,7 @@ other than the current version ID. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.8.9 (2006-01-23)
+=head1 Version 1.8.9 (2006-01-23)
 
 =head2 Improvements
 
@@ -4153,7 +4189,7 @@ in them consistent. Reported by Li Li. [David]
 
 =back
 
-=head1 VERSION 1.8.8 (2005-10-27)
+=head1 Version 1.8.8 (2005-10-27)
 
 =head2 Bug Fixes
 
@@ -4182,7 +4218,7 @@ introduced in 1.8.7. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.8.7 (2005-10-24)
+=head1 Version 1.8.7 (2005-10-24)
 
 =head2 Improvements
 
@@ -4306,7 +4342,7 @@ In a story or media profile, deleting a subelement with the same ID as a field
 
 ##############################################################################
 
-=head1 VERSION 1.8.6 (2005-07-19)
+=head1 Version 1.8.6 (2005-07-19)
 
 =head2 Improvements
 
@@ -4600,7 +4636,7 @@ F<contrib/bric_media_upload/bric_media_upload>. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.8.5 (2005-03-18)
+=head1 Version 1.8.5 (2005-03-18)
 
 =head2 Improvements
 
@@ -4642,7 +4678,7 @@ checkout. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.8.4 (2005-03-18)
+=head1 Version 1.8.4 (2005-03-18)
 
 =head2 Improvements
 
@@ -4989,7 +5025,7 @@ previous image no longer causes an Imager error. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.8.3 (2004-11-09)
+=head1 Version 1.8.3 (2004-11-09)
 
 =head2 Improvements
 
@@ -5297,7 +5333,7 @@ members of the "Global Admins" group. Thanks to Marshall Roch for the spot!
 
 ##############################################################################
 
-=head1 VERSION 1.8.2 (2004-11-13)
+=head1 Version 1.8.2 (2004-11-13)
 
 =head2 Improvements
 
@@ -5765,7 +5801,7 @@ Windows. [Marshall]
 
 ##############################################################################
 
-=head1 VERSION 1.8.1 (2004-07-08)
+=head1 Version 1.8.1 (2004-07-08)
 
 =head2 Improvements
 
@@ -6059,7 +6095,7 @@ site context if the "Filter by Site Context" preference is checked. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.8.0 "Portland" (2004-05-03)
+=head1 Version 1.8.0 "Portland" (2004-05-03)
 
 =head2 Improvements
 
@@ -6216,7 +6252,7 @@ desk or via Bulk Publish. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.7.5 "Ashland" (2004-04-11)
+=head1 Version 1.7.5 "Ashland" (2004-04-11)
 
 =head2 New Features
 
@@ -6408,7 +6444,7 @@ to deleted groups in the permissions interface. So it has been removed.
 
 ##############################################################################
 
-=head1 VERSION 1.7.4 "Sacramento" (2004-03-18)
+=head1 Version 1.7.4 "Sacramento" (2004-03-18)
 
 =head2 New Features
 
@@ -6746,7 +6782,7 @@ from server while idle", and occaisionally a frozen server. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.7.3 (2004-03-01)
+=head1 Version 1.7.3 (2004-03-01)
 
 =head2 New Features
 
@@ -7108,7 +7144,7 @@ longer causes an error. Reported by Marshall Bloch. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.7.2 "Kat" (2004-02-12)
+=head1 Version 1.7.2 "Kat" (2004-02-12)
 
 =head2 New Features
 
@@ -7410,7 +7446,7 @@ sites) that the user does not have at least READ permission to access. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.7.1 (2003-11-30)
+=head1 Version 1.7.1 (2003-11-30)
 
 =head2 Improvements
 
@@ -7581,7 +7617,7 @@ was also changed. [Dave Rolsky]
 
 ##############################################################################
 
-=head1 VERSION 1.7.0 (2003-10-22)
+=head1 Version 1.7.0 (2003-10-22)
 
 =head2 New Features
 
@@ -7898,7 +7934,7 @@ upgrading. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.14 (2004-05-02)
+=head1 Version 1.6.14 (2004-05-02)
 
 =head2 Bug Fixes
 
@@ -7945,7 +7981,7 @@ Reported by Serge Sozonoff. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.13 "Tripled" (2004-04-10)
+=head1 Version 1.6.13 "Tripled" (2004-04-10)
 
 =head2 Bug Fixes
 
@@ -7962,7 +7998,7 @@ a bug report from Serge Sozonoff. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.12 "Tov" (2004-04-09)
+=head1 Version 1.6.12 "Tov" (2004-04-09)
 
 =head2 Bug Fixes
 
@@ -7989,7 +8025,7 @@ them. Reported by Patrick Walsh. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.11 "Green" (2004-03-17)
+=head1 Version 1.6.11 "Green" (2004-03-17)
 
 =head2 Bug Fixes
 
@@ -8028,7 +8064,7 @@ cases. Incidentally, this change also allows dynamic configuration of mod_perl
 
 ##############################################################################
 
-=head1 VERSION 1.6.10 "Jump" (2004-02-29)
+=head1 Version 1.6.10 "Jump" (2004-02-29)
 
 =head2 Bug Fixes
 
@@ -8126,7 +8162,7 @@ Changed the name of the event logged when templates are checked out from
 
 ##############################################################################
 
-=head1 VERSION 1.6.9 (2004-02-06)
+=head1 Version 1.6.9 (2004-02-06)
 
 =head2 Bug Fixes
 
@@ -8240,7 +8276,7 @@ Updated Chinese Traditional localization. [Kang-min Liu]
 
 ##############################################################################
 
-=head1 VERSION 1.6.8 (2003-11-29)
+=head1 Version 1.6.8 (2003-11-29)
 
 =head2 Bug Fixes
 
@@ -8316,7 +8352,7 @@ preview. Reported by Simon Wilcox. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.7 (2003-10-22)
+=head1 Version 1.6.7 (2003-10-22)
 
 =head2 Bug Fixes
 
@@ -8385,7 +8421,7 @@ Eldar Kononov. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.6 (2003-10-03)
+=head1 Version 1.6.6 (2003-10-03)
 
 =head2 New Features
 
@@ -8488,7 +8524,7 @@ directories as files. [Arthur]
 
 ##############################################################################
 
-=head1 VERSION 1.6.5 (2003-09-10)
+=head1 Version 1.6.5 (2003-09-10)
 
 =head2 Bug Fixes
 
@@ -8587,7 +8623,7 @@ type no longer causes an SQL error. Thanks to Gary Gilchrist for the spot.
 
 ##############################################################################
 
-=head1 VERSION 1.6.4 (2003-08-12)
+=head1 Version 1.6.4 (2003-08-12)
 
 =head2 Bug Fixes
 
@@ -8603,7 +8639,7 @@ Preview works again. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.3 (2003-08-12)
+=head1 Version 1.6.3 (2003-08-12)
 
 =head2 Bug Fixes
 
@@ -8731,7 +8767,7 @@ class in the database. Noticed by Radu Greab. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.2 (2003-07-28)
+=head1 Version 1.6.2 (2003-07-28)
 
 =head2 New Features
 
@@ -9004,7 +9040,7 @@ the contents of F<conf/>. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.1 (2003-06-12)
+=head1 Version 1.6.1 (2003-06-12)
 
 =head2 New Features
 
@@ -9181,7 +9217,7 @@ Made unlocalized JavaScript message localized. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.6.0 (2003-04-29)
+=head1 Version 1.6.0 (2003-04-29)
 
 =head2 New Features
 
@@ -9379,7 +9415,7 @@ C<make distclean> now properly deletes F<inst/Pg.sql>. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.5.2 (2003-04-02)
+=head1 Version 1.5.2 (2003-04-02)
 
 =head2 New Features
 
@@ -9482,7 +9518,7 @@ workflows, and on desks. [Mark]
 
 ##############################################################################
 
-=head1 VERSION 1.5.1 (2003-03-23)
+=head1 Version 1.5.1 (2003-03-23)
 
 =head2 New Features
 
@@ -9856,7 +9892,7 @@ so that users can administer media types. Previously, only members of the
 
 ##############################################################################
 
-=head1 VERSION 1.5.0 (2003-01-09)
+=head1 Version 1.5.0 (2003-01-09)
 
 =head2 New Features
 
@@ -10182,7 +10218,7 @@ collections, such as desks, should be more responsive. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.4.6 (2003-01-06)
+=head1 Version 1.4.6 (2003-01-06)
 
 =head2 Bug Fixes
 
@@ -10318,7 +10354,7 @@ C<< Bric::SOAP::Category->list_ids >>. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.4.5 (2002-11-13)
+=head1 Version 1.4.5 (2002-11-13)
 
 =head2 Changes
 
@@ -10490,7 +10526,7 @@ Added missing C<list_ids()> method to Bric::Biz::Category. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.4.4 (2002-10-27)
+=head1 Version 1.4.4 (2002-10-27)
 
 =head2 Bug Fixes
 
@@ -10632,7 +10668,7 @@ Geoff Richards for the spot. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.4.3 (2002-09-28)
+=head1 Version 1.4.3 (2002-09-28)
 
 =head2 Bug Fixes
 
@@ -10659,7 +10695,7 @@ again. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.4.2 (2002-09-27)
+=head1 Version 1.4.2 (2002-09-27)
 
 =head2 Bug Fixes
 
@@ -10699,7 +10735,7 @@ altogether. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.4.1 (2002-09-25)
+=head1 Version 1.4.1 (2002-09-25)
 
 =head2 Bug Fixes
 
@@ -10895,7 +10931,7 @@ both. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.4.0 (2002-09-02)
+=head1 Version 1.4.0 (2002-09-02)
 
 =head2 New Features
 
@@ -11024,7 +11060,7 @@ The F<bric_dist_mon> program works again. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.3.3 (2002-08-24)
+=head1 Version 1.3.3 (2002-08-24)
 
 =head2 New Features
 
@@ -11382,7 +11418,7 @@ reverted. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.3.2 (2002-06-09)
+=head1 Version 1.3.2 (2002-06-09)
 
 =head2 New Features
 
@@ -11624,7 +11660,7 @@ Fixed section numbering in the Contributor Type profile. [Scott Lanning]
 
 ##############################################################################
 
-=head1 VERSION 1.3.1 (2002-04-03)
+=head1 Version 1.3.1 (2002-04-03)
 
 =head2 New Features
 
@@ -11763,7 +11799,7 @@ Implemented the chk_syntax() method in Bric::Util::Burner::Template.
 
 ##############################################################################
 
-=head1 VERSION 1.3.0 (2002-02-10)
+=head1 Version 1.3.0 (2002-02-10)
 
 =head2 New Features
 
@@ -11811,7 +11847,7 @@ All fixes in the soon-to-be-released 1.2.1 version. See below for details.
 
 ##############################################################################
 
-=head1 VERSION 1.2.3 (2002-03-17)
+=head1 Version 1.2.3 (2002-03-17)
 
 Functionally equivalent to 1.2.2, but includes required files missing from the
 1.2.2 distribution.
@@ -11820,7 +11856,7 @@ Functionally equivalent to 1.2.2, but includes required files missing from the
 
 ##############################################################################
 
-=head1 VERSION 1.2.2 (2002-03-15)
+=head1 Version 1.2.2 (2002-03-15)
 
 =head2 New Features
 
@@ -11951,7 +11987,7 @@ The CREATE permission works properly now. Thanks to Rachel Murray for the spot.
 
 ##############################################################################
 
-=head1 VERSION 1.2.1 (2002-02-25)
+=head1 Version 1.2.1 (2002-02-25)
 
 =head2 New Features
 
@@ -12140,7 +12176,7 @@ category. [Matt Vella]
 
 ##############################################################################
 
-=head1 VERSION 1.2.0 (2002-01-10)
+=head1 Version 1.2.0 (2002-01-10)
 
 =head2 New Features
 
@@ -12245,7 +12281,7 @@ choke if it couldn't figure out the MediaType itself. [David]
 
 ##############################################################################
 
-=head1 VERSION 1.0.2 (2001-12-10)
+=head1 Version 1.0.2 (2001-12-10)
 
 =head2 New Features
 
@@ -12392,7 +12428,7 @@ heads-up.
 
 ##############################################################################
 
-=head1 VERSION 1.0.1 (2001-09-28)
+=head1 Version 1.0.1 (2001-09-28)
 
 =over
 
@@ -12406,11 +12442,11 @@ Initial public release.
 
 ##############################################################################
 
-=head1 AUTHOR
+=head1 Author
 
 David Wheeler <david@justatheory.com>
 
-=head1 SEE ALSO
+=head1 See Also
 
 L<Bric|Bric>
 

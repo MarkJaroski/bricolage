@@ -1,12 +1,10 @@
 #!/usr/bin/perl -w
 
-# $Id$
-
-=head1 NAME
+=head1 Name
 
 bric_dist_mon - Bricolage distribution monitor
 
-=head1 SYNOPSIS
+=head1 Synopsis
 
   bric_dist_mon -u username -p password
 
@@ -16,7 +14,7 @@ bric_dist_mon - Bricolage distribution monitor
 
   bric_dist_mon -u username -p password
 
-=head1 DESCRIPTION
+=head1 Description
 
 This program triggers the execution of distribution jobs when they're due. It
 does this by sending a ticler request to the Bricolage server on a regular
@@ -45,7 +43,7 @@ need to be put in place. But since most environments will be well served by
 the 1-minute intervals allowed by cron, we expect that approach to be the
 main way of running F<bric_dist_mon>, thus avoiding the persistence issues.
 
-=head1 OPTIONS
+=head1 Options
 
 =over 4
 
@@ -68,6 +66,10 @@ to 30 seconds.
 The distribution server URL, including the protocol. Defaults to
 "http://localhost/dist/". If "/dist" isn't appended to the end of the URL,
 F<bric_dist_mon> will append it for you.
+
+=item -t
+
+The distribution server request timeout, in seconds. Defaults to 30.
 
 =item -a
 
@@ -99,11 +101,11 @@ Print the version number.
 
 =back
 
-=head1 AUTHOR
+=head1 Author
 
 David Wheeler <david@justatheory.com>
 
-=head1 SEE ALSO
+=head1 See Also
 
 L<Bric::Dist::Client|Bric::Dist::Client>,
 L<Bric::Dist::Handler|Bric::Dist::Handler>.
@@ -157,9 +159,9 @@ use constant URL => 'http://localhost/dist/';
 
 # Get the options.
 our ($opt_i, $opt_U, $opt_h, $opt_d, $opt_c, $opt_f, $opt_v, $opt_u, $opt_p,
-     $opt_a);
+     $opt_a, $opt_t);
 
-getopts('i:u:p:hdcvf:U:P:a:');
+getopts('i:u:p:hdcvf:U:P:a:t:');
 
 # Get the version number.
 use Bric; our $VERSION = Bric->VERSION;
@@ -265,8 +267,9 @@ sub send_jobs {
 
         # Create a client and load the Job IDs.
         my $client = Bric::Dist::Client->new({
-            url => $opt_U,
-            cookie => $cookie->as_string,
+            url     => $opt_U,
+            timeout => $opt_t || Bric::Dist::Client::DEFAULT_TIMEOUT,
+            cookie  => $cookie->as_string,
         });
 #        $client->load_ids;
 
@@ -344,6 +347,7 @@ Supported Options:
      Default is 30 seconds.
   -U The distribution server URL including the protocol. Defaults is
      'http://localhost/dist/'.
+  -t Request timeout, in seconds. Defaults to 30.
   -a IP Address from which the distribution requests will be sent to the
      distribution server. If not provided, $prog will do its best to figure
      out what the IP address is.
