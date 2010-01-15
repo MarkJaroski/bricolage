@@ -15,6 +15,7 @@ use Bric::Util::Trans::FS;
 use Bric::Util::MediaType;
 use Bric::Dist::Action::Mover;
 use Test::MockModule;
+use Data::Dumper;
 
 sub table {'job '}
 
@@ -103,7 +104,7 @@ sub test_lookup : Test(8) {
 
 ##############################################################################
 # Test the list() method.
-sub test_list : Test(48) {
+sub test_list : Test(51) {
     my $self = shift;
 
     # Create a new job group.
@@ -173,8 +174,13 @@ sub test_list : Test(48) {
     my $all_grp_id = Bric::Util::Job::INSTANCE_GROUP_ID;
     foreach my $job (@jobs) {
         my %grp_ids = map { $_ => 1 } $job->get_grp_ids;
-        ok( $grp_ids{$all_grp_id} && $grp_ids{$grp_id},
-          "Check for both IDs" );
+        ok( $grp_ids{$all_grp_id},
+          "Check for 'all' group ID: $all_grp_id in grp_ids:" . Dumper(\%grp_ids) );
+    }
+    foreach my $job (@jobs) {
+        my %grp_ids = map { $_ => 1 } $job->get_grp_ids;
+        ok( $grp_ids{$grp_id},
+          "Check for group IDs" );
     }
 
     # Try deactivating one group membership.

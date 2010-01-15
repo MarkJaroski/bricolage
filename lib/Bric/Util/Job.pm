@@ -2049,22 +2049,22 @@ $get_em = sub {
 
         elsif ($k eq 'server_type_id') {
             # Add job__server_type to the lists of tables and join to it.
-            $tables .= 'JOIN job__server_type ON job.id = js.job__id';
-            $wheres .= ' AND ' . any_where $v, 'js.server_type__id = ?', \@params;
+            $tables .= 'JOIN job__server_type ON job.id = job__server_type.job__id';
+            $wheres .= ' AND ' . any_where $v, 'job__server_type.server_type__id = ?', \@params;
         }
 
         elsif ($k eq 'story_id') {
             # Add story_instance to the lists of tables and join to it.
             $tables .= 'JOIN story_instance 
                             ON job.story_instance__id = story_instance.id';
-            $wheres .= ' AND ' . any_where $v, 'si.story__id = ?', \@params;
+            $wheres .= ' AND ' . any_where $v, 'story_instance.story__id = ?', \@params;
         }
 
         elsif ($k eq 'media_id') {
             # Add media_instance to the lists of tables and join to it.
             $tables .= 'JOIN media_instance 
                             ON job.media_instance__id = media_instance.id';
-            $wheres .= ' AND ' . any_where $v, 'mi.media__id = ?', \@params;
+            $wheres .= ' AND ' . any_where $v, 'media_instance.media__id = ?', \@params;
         }
 
         elsif ($k eq 'uri') {
@@ -2093,7 +2093,7 @@ $get_em = sub {
         elsif ($k eq 'resource_id') {
             # Add job__resource to the lists of tables and join to it.
             $tables .= 'JOIN job__resource ON job.id = job__resource.job__id ';
-            $wheres .= ' AND ' . any_where $v, 'jr.resource__id = ?', \@params;
+            $wheres .= ' AND ' . any_where $v, 'job__resource.resource__id = ?', \@params;
         }
 
         elsif ($k eq 'grp_id') {

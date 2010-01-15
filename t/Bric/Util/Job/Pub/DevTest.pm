@@ -23,6 +23,7 @@ use Bric::Biz::Person::User;
 use Bric::Biz::Asset::Template;
 use Bric::Util::DBI qw(:junction);
 use Test::MockModule;
+use Data::Dumper; # more useful output on failed tests
 
 sub table {'job'}
 
@@ -113,7 +114,7 @@ sub b_test_lookup : Test(7) {
 
 ##############################################################################
 # Test the list() method.
-sub c_test_list : Test(47) {
+sub c_test_list : Test(50) {
     my $self = shift;
 
     # Create a new job group.
@@ -173,6 +174,11 @@ sub c_test_list : Test(47) {
 
         ok( my $job = Bric::Util::Job::Pub->new(\%args), "Create $args{name}" );
         ok( $job->save, "Save $args{name}" );
+        ok( my $all_grp_id = Bric::Util::Job::INSTANCE_GROUP_ID );
+        ok( my $grp_pkg = Bric::Util::Job::GROUP_PACKAGE );
+        ok( my $inst_grp = $grp_pkg->lookup({ id => $all_grp_id }) );
+        my %job_ids = map { $_ => 1 } $inst_grp->get_member_ids;
+        ok( $job_ids{$job->get_id}, "check for registered instance" );
         # Save the ID for deleting.
         $self->add_del_ids($job->get_id);
         $grp->add_member({ obj => $job }) if $n % 2;
@@ -202,8 +208,10 @@ sub c_test_list : Test(47) {
     my $all_grp_id = Bric::Util::Job::INSTANCE_GROUP_ID;
     foreach my $job (@jobs) {
         my %grp_ids = map { $_ => 1 } $job->get_grp_ids;
-        ok( $grp_ids{$all_grp_id} && $grp_ids{$grp_id},
-          "Check for both IDs" );
+        ok( $grp_ids{$all_grp_id},
+          "Check for 'all' group ID: $all_grp_id in grp_ids:" . Dumper(\%grp_ids) );
+        ok( $grp_ids{$grp_id},
+          "Check for group IDs" );
     }
 
     # Try deactivating one group membership.
