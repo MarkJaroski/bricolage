@@ -59,7 +59,7 @@ sub test_thumbnail : Test(9) {
 }
 
 ##############################################################################
-sub test_alternate_thumb : Test(26) {
+sub test_alternate_thumb : Test(27) {
     my $self = shift;
 
     # Gotta have thumbnail support to run this test.
