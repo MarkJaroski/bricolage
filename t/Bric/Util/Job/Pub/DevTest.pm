@@ -21,11 +21,14 @@ use Bric::Biz::Asset::Business::Media;
 use Bric::Util::Burner;
 use Bric::Biz::Person::User;
 use Bric::Biz::Asset::Template;
-use Bric::Util::DBI qw(:junction);
+use Bric::Util::DBI qw(:all);
 use Test::MockModule;
 use Data::Dumper; # more useful output on failed tests
 
 sub table {'job'}
+
+our $DB;
+do "./database.db" or die "Failed to read database.db: $!";
 
 my $date = '2003-01-22 14:43:23.000000';
 
@@ -43,10 +46,9 @@ sub test_setup : Test(setup) {
 }
 
 sub test_teardown : Test(teardown) {
-    my $self = shift;
-    delete($self->{event})->unmock_all;
-    Bric::Util::DBI::prepare(qq{DELETE FROM job WHERE id > 1023})->execute;
-    return $self;
+    rollback;
+    my $psql = $DB->{exec} . " -1 -d " . $DB->{db_name} . " -f t/Pg_reset.sql";
+    system($psql);
 }
 
 ##############################################################################
@@ -55,7 +57,7 @@ sub test_teardown : Test(teardown) {
 ##############################################################################
 sub _clean_test_vals : Test(startup) {
     my $self = shift;
-    $self->add_del_ids([1,2]);
+#    $self->add_del_ids([1,2]);
 }
 
 ##############################################################################
@@ -101,7 +103,7 @@ sub b_test_lookup : Test(7) {
     ok( my $job = Bric::Util::Job::Pub->new(\%args), "Create job" );
     ok( $job->save, "Save the job" );
     ok( my $jid = $job->get_id, "Get the job ID" );
-    $self->add_del_ids($jid);
+#    $self->add_del_ids($jid);
     ok( $job = Bric::Util::Job::Pub->lookup({ id => $jid }),
         "Look up the new job ID '$jid'" );
     is( $job->get_id, $jid, "Check that the ID is the same" );
@@ -114,11 +116,11 @@ sub b_test_lookup : Test(7) {
 
 ##############################################################################
 # Test the list() method.
-sub c_test_list : Test(50) {
+sub c_test_list : Test(70) {
     my $self = shift;
 
     # Create a new job group.
-    ok( my $grp = Bric::Util::Grp::Job->new({ name => 'Test JobGrp' }),
+    ok( my $grp = Bric::Util::Grp::Job::Pub->new({ name => 'Test JobGrp' }),
         "Create group" );
 
     my ($element) = Bric::Biz::ElementType->list({ name => 'Story' });
@@ -135,7 +137,7 @@ sub c_test_list : Test(50) {
     $dest->add_output_channels($oc);
     ok( $dest->save, "Save destination" );
     ok( my $did = $dest->get_id, "Get destination ID" );
-    $self->add_del_ids($did, 'server_type');
+#    $self->add_del_ids($did, 'server_type');
 
     # look up a story element
     my $time = time;
@@ -156,7 +158,7 @@ sub c_test_list : Test(50) {
     $story->save();
     my $svid = $story->get_version_id;
     my $sid  = $story->get_id;
-    $self->add_del_ids($sid, 'story');
+#    $self->add_del_ids($sid, 'story');
 
     # XXX Check media too !!!
 
@@ -177,17 +179,17 @@ sub c_test_list : Test(50) {
         ok( my $all_grp_id = Bric::Util::Job::INSTANCE_GROUP_ID );
         ok( my $grp_pkg = Bric::Util::Job::GROUP_PACKAGE );
         ok( my $inst_grp = $grp_pkg->lookup({ id => $all_grp_id }) );
-        my %job_ids = map { $_ => 1 } $inst_grp->get_member_ids;
+        my %job_ids = map { $_ => 1 } $inst_grp->get_member_ids($all_grp_id);
         ok( $job_ids{$job->get_id}, "check for registered instance" );
         # Save the ID for deleting.
-        $self->add_del_ids($job->get_id);
+#        $self->add_del_ids($job->get_id);
         $grp->add_member({ obj => $job }) if $n % 2;
     }
 
     # Save the group.
     ok( $grp->save, "Save group" );
     ok( my $grp_id = $grp->get_id, "Get group ID" );
-    $self->add_del_ids($grp_id, 'grp');
+#    $self->add_del_ids($grp_id, 'grp');
 
     # Try name.
     ok( my @jobs = Bric::Util::Job::Pub->list({ name => $job{name} }),
@@ -209,7 +211,8 @@ sub c_test_list : Test(50) {
     foreach my $job (@jobs) {
         my %grp_ids = map { $_ => 1 } $job->get_grp_ids;
         ok( $grp_ids{$all_grp_id},
-          "Check for 'all' group ID: $all_grp_id in grp_ids:" . Dumper(\%grp_ids) );
+          "Check for 'all' group ID: $all_grp_id in grp_ids:\n" 
+				. Dumper($job) );
         ok( $grp_ids{$grp_id},
           "Check for group IDs" );
     }
@@ -221,7 +224,8 @@ sub c_test_list : Test(50) {
     # Now there should only be two using grp_id.
     ok( @jobs = Bric::Util::Job::Pub->list({ grp_id => $grp_id }),
         "Look up grp_id '$grp_id' again" );
-    is( scalar @jobs, 2, "Check for 2 jobs" );
+    is( scalar @jobs, 2, "Check for 2 jobs with grp_id $grp_id" 
+            .  run_flat_query(80, $grp_id) );
 
     # Try user_id.
     my $uid = $self->user_id;
@@ -292,14 +296,14 @@ sub d_test_list_ids : Test(21) {
         ok( my $job = Bric::Util::Job::Pub->new(\%args), "Create $args{name}" );
         ok( $job->save, "Save $args{name}" );
         # Save the ID for deleting.
-        $self->add_del_ids($job->get_id);
+#        $self->add_del_ids($job->get_id);
         $grp->add_member({ obj => $job }) if $n % 2;
     }
 
     # Save the group.
     ok( $grp->save, "Save group" );
     ok( my $grp_id = $grp->get_id, "Get group ID" );
-    $self->add_del_ids($grp_id, 'grp');
+#    $self->add_del_ids($grp_id, 'grp');
 
     # Try name.
     ok( my @job_ids = Bric::Util::Job::Pub->list_ids({ name => $job{name} }),
@@ -333,7 +337,7 @@ sub f_test_save : Test(9) {
     ok( my $job = Bric::Util::Job::Pub->new(\%args), "Create job" );
     ok( $job->save, "Save the job" );
     ok( my $jid = $job->get_id, "Get the job ID" );
-    $self->add_del_ids($jid);
+#    $self->add_del_ids($jid);
     ok( $job = Bric::Util::Job::Pub->lookup({ id => $jid }),
         "Look up the new job" );
     ok( my $old_name = $job->get_name, "Get its name" );
@@ -365,7 +369,7 @@ sub g_test_execute_me : Test(10) {
     $dest->add_output_channels($oc); # this is crucial for publishing
     $dest->save;
     my $did = $dest->get_id;
-    $self->add_del_ids($did, 'server_type');
+#    $self->add_del_ids($did, 'server_type');
     # Create a story
     my $time = time;
     my $story = Bric::Biz::Asset::Business::Story->new({
@@ -384,7 +388,7 @@ sub g_test_execute_me : Test(10) {
     $story->set_cover_date('2005-03-22 21:07:56');
     $story->save();
     my $sid = $story->get_id;
-    $self->add_del_ids($sid, 'story');
+#    $self->add_del_ids($sid, 'story');
     # create a job
     my $job = Bric::Util::Job::Pub->new(\%args);
     # add the story to the job
@@ -400,7 +404,7 @@ sub g_test_execute_me : Test(10) {
         ok( $job->save, 'Save (and execute) the job');
     }
     is( $job->get_error_message, undef, "There was no error running job.");
-    $self->add_del_ids($job->get_id);
+#    $self->add_del_ids($job->get_id);
     # test: Check that our job is now complete
     ok( $job = Bric::Util::Job->lookup({ id => $job->get_id }), 
       'lookup the job we just executed' );
@@ -418,7 +422,7 @@ sub g_test_execute_me : Test(10) {
       'get the resources of from the new dist job');
     is( scalar @resources, 1, '... there should be just one' );
     my ($resource) = @resources;
-    $self->add_del_ids($resource->get_id,'resource');
+#    $self->add_del_ids($resource->get_id,'resource');
     # test: get the resource path
     ok( my $path = $resource->get_path, 'get the path to the resource');
     open IN, $path;
@@ -447,7 +451,7 @@ Page 1
 };
     is( $got, $expect, 'Check that the resource came out all right');
     # Save any dist job ids for deleting too
-    $self->add_del_ids( [ Bric::Util::Job::Dist->list_ids ] );
+#    $self->add_del_ids( [ Bric::Util::Job::Dist->list_ids ] );
 }
 
 ##############################################################################
@@ -464,7 +468,7 @@ sub h_test_execute_me : Test(16) {
         primary_oc_id => 1
     });
     $elem->save;
-    $self->add_del_ids($elem->get_id, 'element_type');
+#    $self->add_del_ids($elem->get_id, 'element_type');
 
     my $tmpl = Bric::Biz::Asset::Template->new({
         output_channel__id => 1,
@@ -475,7 +479,7 @@ sub h_test_execute_me : Test(16) {
         data               => '% die "Goodbye cruel world !";',
     });
     $tmpl->save;
-    $self->add_del_ids($tmpl->get_id, 'template');
+#    $self->add_del_ids($tmpl->get_id, 'template');
 
     # Create a burner.
     my $fs = Bric::Util::Trans::FS->new;
@@ -500,7 +504,7 @@ sub h_test_execute_me : Test(16) {
     $dest->add_output_channels($oc); # this is crucial for publishing
     $dest->save;
     my $did = $dest->get_id;
-    $self->add_del_ids($did, 'server_type');
+#    $self->add_del_ids($did, 'server_type');
 
     # Create a story
     my $story = Bric::Biz::Asset::Business::Story->new({
@@ -521,7 +525,7 @@ sub h_test_execute_me : Test(16) {
     $story->set_primary_oc_id(1);
     $story->set_cover_date('2005-03-22 21:07:56');
     $story->save;
-    $self->add_del_ids($story->get_id, 'story');
+#    $self->add_del_ids($story->get_id, 'story');
 
     # Make sure that the old story_id parameter still works.
     my $job = Bric::Util::Job::Pub->new({
@@ -538,7 +542,7 @@ sub h_test_execute_me : Test(16) {
         dies_ok {$job->save} 'Publish with a template error';
     }
     # Save the ID for deleting.
-    $self->add_del_ids($job->get_id);
+#    $self->add_del_ids($job->get_id);
 
     # check for error message
     isnt($job->get_error_message, undef, "... should have an error message now.");
@@ -562,6 +566,39 @@ sub h_test_execute_me : Test(16) {
        'The error message should be undefined again');
     is($job->get_tries, 0, 'Tries should be reset');
     is($job->has_failed, 0, 'The job should no loner be marked as failed');
+}
+
+sub run_flat_query {
+    my @args = @_;
+    my $sql = qq{
+            SELECT job.id, job.name, job.expire, job.usr__id, job.sched_time, job.priority, job.comp_time, job.tries, job.error_message, job.executing, job.story_instance__id, job.media_instance__id, job.class__id, job.failed, group_concat( DISTINCT member.grp__id )                                                                                                  
+        FROM                                                                                                            
+        job                                                                                                             
+            JOIN job_member                                                                                             
+                ON job.id = job_member.object_id                                                                        
+            JOIN member                                                                                                 
+                ON member.id = job_member.member__id                                                                    
+                                                                                                                        
+        WHERE  member.active = 't' AND job.class__id = ? AND job.id in ( select job.id from                             
+        job                                                                                                             
+            JOIN job_member                                                                                             
+                ON job.id = job_member.object_id                                                                        
+            JOIN member                                                                                                 
+                ON member.id = job_member.member__id                                                                    
+     where member.grp__id = ? )                                                                                         
+        GROUP BY job.id, job.name, job.expire, job.usr__id, job.sched_time, job.priority, job.comp_time, job.tries, job.error_message, job.executing, job.story_instance__id, job.media_instance__id, job.class__id, job.failed, job.priority, job.sched_time, job.id
+        ORDER BY job.priority, job.sched_time, job.id
+};
+    my $dbh = prepare($sql);
+    $dbh->execute(@args);
+    my @tuples;
+    bind_columns($dbh, \@tuples[0..14]);
+    my $result;
+    while (fetch($dbh)) {
+        $result .= Dumper(\@tuples);
+    }
+    $dbh->finish;
+    return "$sql\n$result\n";
 }
 
 1;

@@ -106,6 +106,7 @@ use constant DEBUG => 0;
 use constant GROUP_PACKAGE => 'Bric::Util::Grp::Job';
 use constant INSTANCE_GROUP_ID => 30;
 use constant NAME_MAX_LENGTH => 246;
+use constant OBJECT_SELECT_COLUMN_NUMBER => 0;
 
 my $PKG_MAP = {
     54 => 'Bric::Util::Job',
@@ -130,7 +131,8 @@ my @ORD = @PROPS[1..$#PROPS - 6];
 
 my $SEL_COLS = 'job.id, job.name, job.expire, job.usr__id, job.sched_time, job.priority, '
   . 'job.comp_time, job.tries, job.error_message, job.executing, job.story_instance__id, '
-  . 'job.media_instance__id, job.class__id, job.failed, member.grp__id';
+  . 'job.media_instance__id, job.class__id, job.failed';
+my $GROUP_COLS = group_concat_sql('member.grp__id');
 my @SEL_PROPS = (@PROPS, 'grp_ids');
 
 my @SCOL_ARGS = ('Bric::Util::Coll::ServerType', '_server_types');
@@ -1786,7 +1788,7 @@ sub save {
 
         # Register this job in the "All Jobs" group and save any associated
         # destinations and resources.
-        $self->register_instance(INSTANCE_GROUP_ID, GROUP_PACKAGE);
+        $self->register_instance(INSTANCE_GROUP_ID, $self->GROUP_PACKAGE);
         $res->save($id) if $res;
         $sts->save($id) if $sts;
 
@@ -2018,7 +2020,7 @@ $get_em = sub {
                 ON member.id = job_member.member__id
     };
     my $wheres = "member.active = 't'";
-    my @params;
+    my (@params, @args);
     my %map = (
         id                => 'job.id = ?',
         _class_id         => 'job.class__id = ?',
@@ -2096,7 +2098,12 @@ $get_em = sub {
 
         elsif ($k eq 'grp_id') {
             # Add in the group tables a second time and join to them.
-            $wheres .= ' AND ' . any_where $v, 'member.grp__id = ?', \@params;
+            $wheres .= ' AND ' . 
+                any_where $v, "job.id in "
+                              . "( SELECT job.id "
+                              . "FROM $tables "
+                              . "WHERE member.active = true "
+                                    . "AND member.grp__id = ? )", \@params;
         }
 
         else {
@@ -2133,42 +2140,30 @@ $get_em = sub {
     }
 
     # Assemble and prepare the query.
+    my $all_sel_cols = $ids ? $SEL_COLS : "$SEL_COLS, $GROUP_COLS";
     my ($qry_cols, $order) = $ids ? (\'DISTINCT job.id', 'job.id')
-                                  : (\$SEL_COLS, 'job.priority, job.sched_time, job.id')
+                                  : (\$all_sel_cols, 'job.priority, job.sched_time, job.id')
                                   ;
 
-    my $sel = prepare_c(qq{
+    my $group_by = $ids ? "" : "GROUP BY $SEL_COLS, job.priority, job.sched_time, job.id";
+    my $sql = qq{
         SELECT $$qry_cols
         FROM   $tables
         WHERE  $wheres
+        $group_by
         ORDER BY $order
-    }, undef, DEBUG);
+    };
 
-    # Just return the IDs, if they're what's wanted.
-    return col_aref($sel, @params) if $ids;
-
-    execute($sel, @params);
-    my (@d, @jobs, $grp_ids);
-    bind_columns($sel, \@d[0..$#SEL_PROPS]);
-    my $last = -1;
-    $pkg = ref $pkg || $pkg;
-    while (fetch($sel)) {
-        if ($d[0] != $last) {
-            $last = $d[0];
-            # Create a new job object.
-            my $self = bless {}, $pkg;
-            $self->SUPER::new;
-            # Get a reference to the array of group IDs.
-            $grp_ids = $d[$#d] = [$d[$#d]];
-            $self->_set(\@SEL_PROPS, \@d);
-            bless $self, $PKG_MAP->{$self->_get('_class_id')};
-            $self->_set__dirty; # Disables dirty flag.
-            push @jobs, $self;
-        } else {
-            push @$grp_ids, $d[$#d];
-        }
+    if ($ids) {
+        my $sel = prepare_c($sql, undef, DEBUG);
+        # Just return the IDs, if they're what's wanted.
+        return col_aref($sel, @params);
     }
-    return \@jobs;
+
+    my $fields = [ @PROPS, 'grp_ids' ];
+    my @objs = fetch_objects($pkg, \$sql, $fields, 1, \@params);
+
+    return (wantarray ? @objs : \@objs);
 };
 
 ##############################################################################

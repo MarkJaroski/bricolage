@@ -78,12 +78,14 @@ use Bric::Biz::Asset::Business::Media::Audio;
 use Bric::Biz::Asset::Business::Media::Image;
 use Bric::Biz::Asset::Business::Media::Video;
 use Bric::Biz::Asset::Business::Story;
+use Bric::Util::Grp::Job::Pub;
 
 ################################################################################
 # Constants
 ################################################################################
 use constant KEY_NAME => 'pub_job';
 use constant CLASS_ID => 80;
+use constant GROUP_PACKAGE => 'Bric::Util::Grp::Job::Pub';
 
 ################################################################################
 # Inheritance

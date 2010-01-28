@@ -153,7 +153,10 @@ B<Notes:> NONE.
 
 =cut
 
-sub get_object_class_id { OBJECT_CLASS_ID }
+sub get_object_class_id { 
+    my $self = shift;
+    return $self->OBJECT_CLASS_ID; 
+}
 
 ################################################################################
 

@@ -74,12 +74,14 @@ use Bric::Util::Time qw(:all);
 use Bric::Util::Class;
 use Bric::App::Event qw(log_event);
 use Bric::Dist::Action::Mover;
+use Bric::Util::Grp::Job::Dist;
 
 ################################################################################
 # Constants
 ################################################################################
 use constant KEY_NAME => 'dist_job';
 use constant CLASS_ID => 79;
+use constant GROUP_PACKAGE => 'Bric::Util::Grp::Job::Dist';
 
 ################################################################################
 # Inheritance
