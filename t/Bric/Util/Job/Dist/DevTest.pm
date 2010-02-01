@@ -15,6 +15,7 @@ use Bric::Util::Trans::FS;
 use Bric::Util::MediaType;
 use Bric::Dist::Action::Mover;
 use Test::MockModule;
+use Bric::Util::DBI qw(:all);
 use Data::Dumper;
 
 sub table {'job '}
@@ -29,15 +30,22 @@ my %job = ( name => 'Test Job',
 sub test_setup : Test(setup) {
     my $self = shift;
     # Turn off event logging.
-    $self->{event} = Test::MockModule->new('Bric::Util::Job');
-    $self->{event}->mock(commit_events => undef);
+    $self->{mock_job} = Test::MockModule->new('Bric::Util::Job');
+    $self->{mock_job}->mock(commit_events => undef);
+    $self->{mock_job}->mock(commit => undef);
+    $self->{mock_job}->mock(begin => undef);
+    $self->{mock_job}->mock(rollback => undef);
+    $self->{mock_asset} = Test::MockModule->new('Bric::Biz::Asset::Business::Story');
+    $self->{mock_asset}->mock(commit_events => undef);
+    $self->{mock_asset}->mock(commit => undef);
+    $self->{mock_asset}->mock(begin => undef);
+    $self->{mock_asset}->mock(rollback => undef);
+    rollback;
+    begin;
 }
 
 sub test_teardown : Test(teardown) {
-    my $self = shift;
-    delete($self->{event})->unmock_all;
-    Bric::Util::DBI::prepare(qq{DELETE FROM job WHERE id > 1023})->execute;
-    return $self;
+    rollback;
 }
 
 ##############################################################################
@@ -308,7 +316,6 @@ sub test_save : Test(9) {
         "Look it up again" );
     is( $job->get_name, $new_name, "Check name is '$new_name'" );
     # Commit so we can be sure all records will be deleted.
-    Bric::Util::DBI::commit();
 }
 
 ##############################################################################

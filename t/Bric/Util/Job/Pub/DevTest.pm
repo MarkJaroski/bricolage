@@ -41,14 +41,22 @@ my %job = (
 sub test_setup : Test(setup) {
     my $self = shift;
     # Turn off event logging.
-    $self->{event} = Test::MockModule->new('Bric::Util::Job');
-    $self->{event}->mock(commit_events => undef);
+    $self->{mock_job} = Test::MockModule->new('Bric::Util::Job');
+    $self->{mock_job}->mock(commit_events => undef);
+    $self->{mock_job}->mock(commit => undef);
+    $self->{mock_job}->mock(begin => undef);
+    $self->{mock_job}->mock(rollback => undef);
+    $self->{mock_asset} = Test::MockModule->new('Bric::Biz::Asset::Business::Story');
+    $self->{mock_asset}->mock(commit_events => undef);
+    $self->{mock_asset}->mock(commit => undef);
+    $self->{mock_asset}->mock(begin => undef);
+    $self->{mock_asset}->mock(rollback => undef);
+    rollback;
+    begin;
 }
 
 sub test_teardown : Test(teardown) {
     rollback;
-    my $psql = $DB->{exec} . " -1 -d " . $DB->{db_name} . " -f t/Pg_reset.sql";
-    system($psql);
 }
 
 ##############################################################################
@@ -57,7 +65,6 @@ sub test_teardown : Test(teardown) {
 ##############################################################################
 sub _clean_test_vals : Test(startup) {
     my $self = shift;
-#    $self->add_del_ids([1,2]);
 }
 
 ##############################################################################
@@ -103,7 +110,6 @@ sub b_test_lookup : Test(7) {
     ok( my $job = Bric::Util::Job::Pub->new(\%args), "Create job" );
     ok( $job->save, "Save the job" );
     ok( my $jid = $job->get_id, "Get the job ID" );
-#    $self->add_del_ids($jid);
     ok( $job = Bric::Util::Job::Pub->lookup({ id => $jid }),
         "Look up the new job ID '$jid'" );
     is( $job->get_id, $jid, "Check that the ID is the same" );
@@ -137,7 +143,6 @@ sub c_test_list : Test(70) {
     $dest->add_output_channels($oc);
     ok( $dest->save, "Save destination" );
     ok( my $did = $dest->get_id, "Get destination ID" );
-#    $self->add_del_ids($did, 'server_type');
 
     # look up a story element
     my $time = time;
@@ -158,7 +163,6 @@ sub c_test_list : Test(70) {
     $story->save();
     my $svid = $story->get_version_id;
     my $sid  = $story->get_id;
-#    $self->add_del_ids($sid, 'story');
 
     # XXX Check media too !!!
 
@@ -182,14 +186,12 @@ sub c_test_list : Test(70) {
         my %job_ids = map { $_ => 1 } $inst_grp->get_member_ids($all_grp_id);
         ok( $job_ids{$job->get_id}, "check for registered instance" );
         # Save the ID for deleting.
-#        $self->add_del_ids($job->get_id);
         $grp->add_member({ obj => $job }) if $n % 2;
     }
 
     # Save the group.
     ok( $grp->save, "Save group" );
     ok( my $grp_id = $grp->get_id, "Get group ID" );
-#    $self->add_del_ids($grp_id, 'grp');
 
     # Try name.
     ok( my @jobs = Bric::Util::Job::Pub->list({ name => $job{name} }),
@@ -296,14 +298,12 @@ sub d_test_list_ids : Test(21) {
         ok( my $job = Bric::Util::Job::Pub->new(\%args), "Create $args{name}" );
         ok( $job->save, "Save $args{name}" );
         # Save the ID for deleting.
-#        $self->add_del_ids($job->get_id);
         $grp->add_member({ obj => $job }) if $n % 2;
     }
 
     # Save the group.
     ok( $grp->save, "Save group" );
     ok( my $grp_id = $grp->get_id, "Get group ID" );
-#    $self->add_del_ids($grp_id, 'grp');
 
     # Try name.
     ok( my @job_ids = Bric::Util::Job::Pub->list_ids({ name => $job{name} }),
@@ -337,7 +337,6 @@ sub f_test_save : Test(9) {
     ok( my $job = Bric::Util::Job::Pub->new(\%args), "Create job" );
     ok( $job->save, "Save the job" );
     ok( my $jid = $job->get_id, "Get the job ID" );
-#    $self->add_del_ids($jid);
     ok( $job = Bric::Util::Job::Pub->lookup({ id => $jid }),
         "Look up the new job" );
     ok( my $old_name = $job->get_name, "Get its name" );
@@ -369,7 +368,6 @@ sub g_test_execute_me : Test(10) {
     $dest->add_output_channels($oc); # this is crucial for publishing
     $dest->save;
     my $did = $dest->get_id;
-#    $self->add_del_ids($did, 'server_type');
     # Create a story
     my $time = time;
     my $story = Bric::Biz::Asset::Business::Story->new({
@@ -388,7 +386,6 @@ sub g_test_execute_me : Test(10) {
     $story->set_cover_date('2005-03-22 21:07:56');
     $story->save();
     my $sid = $story->get_id;
-#    $self->add_del_ids($sid, 'story');
     # create a job
     my $job = Bric::Util::Job::Pub->new(\%args);
     # add the story to the job
@@ -404,7 +401,6 @@ sub g_test_execute_me : Test(10) {
         ok( $job->save, 'Save (and execute) the job');
     }
     is( $job->get_error_message, undef, "There was no error running job.");
-#    $self->add_del_ids($job->get_id);
     # test: Check that our job is now complete
     ok( $job = Bric::Util::Job->lookup({ id => $job->get_id }), 
       'lookup the job we just executed' );
@@ -422,7 +418,6 @@ sub g_test_execute_me : Test(10) {
       'get the resources of from the new dist job');
     is( scalar @resources, 1, '... there should be just one' );
     my ($resource) = @resources;
-#    $self->add_del_ids($resource->get_id,'resource');
     # test: get the resource path
     ok( my $path = $resource->get_path, 'get the path to the resource');
     open IN, $path;
@@ -451,7 +446,6 @@ Page 1
 };
     is( $got, $expect, 'Check that the resource came out all right');
     # Save any dist job ids for deleting too
-#    $self->add_del_ids( [ Bric::Util::Job::Dist->list_ids ] );
 }
 
 ##############################################################################
@@ -468,7 +462,6 @@ sub h_test_execute_me : Test(16) {
         primary_oc_id => 1
     });
     $elem->save;
-#    $self->add_del_ids($elem->get_id, 'element_type');
 
     my $tmpl = Bric::Biz::Asset::Template->new({
         output_channel__id => 1,
@@ -479,7 +472,6 @@ sub h_test_execute_me : Test(16) {
         data               => '% die "Goodbye cruel world !";',
     });
     $tmpl->save;
-#    $self->add_del_ids($tmpl->get_id, 'template');
 
     # Create a burner.
     my $fs = Bric::Util::Trans::FS->new;
@@ -504,7 +496,6 @@ sub h_test_execute_me : Test(16) {
     $dest->add_output_channels($oc); # this is crucial for publishing
     $dest->save;
     my $did = $dest->get_id;
-#    $self->add_del_ids($did, 'server_type');
 
     # Create a story
     my $story = Bric::Biz::Asset::Business::Story->new({
@@ -525,7 +516,6 @@ sub h_test_execute_me : Test(16) {
     $story->set_primary_oc_id(1);
     $story->set_cover_date('2005-03-22 21:07:56');
     $story->save;
-#    $self->add_del_ids($story->get_id, 'story');
 
     # Make sure that the old story_id parameter still works.
     my $job = Bric::Util::Job::Pub->new({
@@ -541,8 +531,6 @@ sub h_test_execute_me : Test(16) {
     } else {
         dies_ok {$job->save} 'Publish with a template error';
     }
-    # Save the ID for deleting.
-#    $self->add_del_ids($job->get_id);
 
     # check for error message
     isnt($job->get_error_message, undef, "... should have an error message now.");
