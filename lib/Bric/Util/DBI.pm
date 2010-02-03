@@ -145,6 +145,8 @@ END { _disconnect(); }
 # Exportable Functions
 ##############################################################################
 
+sub in_debug_mode { DEBUG }
+
 =pod
 
 =head1 Interface
@@ -446,7 +448,7 @@ sub prepare {
     throw_da error   => "Unable to prepare SQL statement\n\n$_[0]",
              payload => $@
       if $@;
-    _debug_prepare(\$_[0]) if DEBUG;
+    _debug_prepare(\$_[0]) if in_debug_mode;
     return $sth;
 } # prepare()
 
@@ -488,7 +490,7 @@ sub prepare_c {
     throw_da error   => "Unable to prepare SQL statement\n\n$_[0]",
              payload => $@
       if $@;
-    _debug_prepare(\$_[0]) if DEBUG;
+    _debug_prepare(\$_[0]) if in_debug_mode;
     return $sth;
 } # prepare_c()
 
@@ -531,7 +533,7 @@ sub prepare_ca {
     throw_da error   => "Unable to prepare SQL statement\n\n$_[0]",
              payload => $@
       if $@;
-    _debug_prepare(\$_[0]) if DEBUG;
+    _debug_prepare(\$_[0]) if in_debug_mode;
     return $sth;
 } # prepare_ca()
 
@@ -1128,7 +1130,7 @@ B<Notes:> NONE.
 
 sub execute {
     my $sth = shift;
-    _debug_execute(\@_, $sth) if DEBUG;
+    _debug_execute(\@_, $sth) if in_debug_mode;
     _profile_start()          if DBI_PROFILE;
 
     my $ret = eval { $sth->execute(@_) };
@@ -1525,7 +1527,7 @@ B<Notes:> NONE.
 sub row_aref {
     my ($qry, @params) = @_;
     my $dbh = _connect();
-    _debug_prepare_and_execute(\@params, \$qry) if DEBUG;
+    _debug_prepare_and_execute(\@params, \$qry) if in_debug_mode;
     _profile_start() if DBI_PROFILE;
 
     my $aref = eval { $dbh->selectrow_arrayref($qry, undef, @params) };
@@ -1573,7 +1575,7 @@ B<Notes:> NONE.
 sub row_array {
     my ($qry, @params) = @_;
     my $dbh = _connect();
-    _debug_prepare_and_execute(\@params, \$qry) if DEBUG;
+    _debug_prepare_and_execute(\@params, \$qry) if in_debug_mode;
     _profile_start() if DBI_PROFILE;
 
     my @array;
@@ -1626,7 +1628,7 @@ B<Notes:> NONE.
 sub all_aref {
     my ($qry, @params) = @_;
     my $dbh = _connect();
-    _debug_prepare_and_execute(\@params, \$qry) if DEBUG;
+    _debug_prepare_and_execute(\@params, \$qry) if in_debug_mode;
     _profile_start() if DBI_PROFILE;
 
     my $aref = eval { $dbh->selectall_arrayref($qry, undef, @params) };
@@ -1673,7 +1675,7 @@ B<Notes:> NONE.
 sub col_aref {
     my ($qry, @params) = @_;
     my $dbh = _connect();
-    _debug_prepare_and_execute(\@params, \$qry) if DEBUG;
+    _debug_prepare_and_execute(\@params, \$qry) if in_debug_mode;
     _profile_start() if DBI_PROFILE;
 
     my $col = eval { $dbh->selectcol_arrayref($qry, undef, @params) };

@@ -12,7 +12,7 @@ use Bric::Util::Time qw(:all);
 use Bric::Dist::Server;
 use Bric::Dist::ServerType;
 use Bric::Dist::Resource;
-use Bric::Config qw(:time TEMP_DIR QUEUE_PUBLISH_JOBS);
+use Bric::Config qw(:time DBI_DEBUG TEMP_DIR QUEUE_PUBLISH_JOBS);
 use Bric::Util::Trans::FS;
 use Bric::Util::MediaType;
 use Bric::Biz::ElementType;
@@ -40,7 +40,7 @@ my %job = (
 
 sub test_setup : Test(setup) {
     my $self = shift;
-    # Turn off event logging.
+    # Turn off event logging, and job locking
     $self->{mock_job} = Test::MockModule->new('Bric::Util::Job');
     $self->{mock_job}->mock(commit_events => undef);
     $self->{mock_job}->mock(commit => undef);
@@ -51,8 +51,12 @@ sub test_setup : Test(setup) {
     $self->{mock_asset}->mock(commit => undef);
     $self->{mock_asset}->mock(begin => undef);
     $self->{mock_asset}->mock(rollback => undef);
+    # set up for possible debugging
+    $self->{mock_dbi} = Test::MockModule->new('Bric::Util::DBI');
+    $self->{mock_dbi}->mock(in_debug_mode => DBI_DEBUG);
     rollback;
     begin;
+    $self->deploy_templates;
 }
 
 sub test_teardown : Test(teardown) {
@@ -60,27 +64,19 @@ sub test_teardown : Test(teardown) {
 }
 
 ##############################################################################
-# Clean out possible test values from Job.tst. We can delete this if we ever
-# delete the .tst files.
-##############################################################################
-sub _clean_test_vals : Test(startup) {
-    my $self = shift;
-}
-
-##############################################################################
 # Deploy the story and autohandler templates. During tests, they won't be
 # found because we're using a temporary directory.
 ##############################################################################
-sub _run_me_first : Test(4) {
-    ok( my @tmpl = Bric::Biz::Asset::Template->list({
+sub deploy_templates {
+    my @tmpl = Bric::Biz::Asset::Template->list({
         output_channel__id => 1,
         file_name          => ANY('/story.mc', '/autohandler'),
         Order              => 'file_name',
-    }), "Get story template.");
+    });
 
-    ok( my $burner = Bric::Util::Burner->new, "Get burner" );
-    ok( $burner->deploy($tmpl[0]), "Deploy autohandler template" );
-    ok( $burner->deploy($tmpl[1]), "Deploy story template" );
+    my $burner = Bric::Util::Burner->new;
+    $burner->deploy($tmpl[0]);
+    $burner->deploy($tmpl[1]);
 }
 
 ##############################################################################
@@ -226,8 +222,7 @@ sub c_test_list : Test(70) {
     # Now there should only be two using grp_id.
     ok( @jobs = Bric::Util::Job::Pub->list({ grp_id => $grp_id }),
         "Look up grp_id '$grp_id' again" );
-    is( scalar @jobs, 2, "Check for 2 jobs with grp_id $grp_id" 
-            .  run_flat_query(80, $grp_id) );
+    is( scalar @jobs, 2, "Check for 2 jobs with grp_id $grp_id" );
 
     # Try user_id.
     my $uid = $self->user_id;
@@ -556,37 +551,30 @@ sub h_test_execute_me : Test(16) {
     is($job->has_failed, 0, 'The job should no loner be marked as failed');
 }
 
-sub run_flat_query {
-    my @args = @_;
-    my $sql = qq{
-            SELECT job.id, job.name, job.expire, job.usr__id, job.sched_time, job.priority, job.comp_time, job.tries, job.error_message, job.executing, job.story_instance__id, job.media_instance__id, job.class__id, job.failed, group_concat( DISTINCT member.grp__id )                                                                                                  
-        FROM                                                                                                            
-        job                                                                                                             
-            JOIN job_member                                                                                             
-                ON job.id = job_member.object_id                                                                        
-            JOIN member                                                                                                 
-                ON member.id = job_member.member__id                                                                    
-                                                                                                                        
-        WHERE  member.active = 't' AND job.class__id = ? AND job.id in ( select job.id from                             
-        job                                                                                                             
-            JOIN job_member                                                                                             
-                ON job.id = job_member.object_id                                                                        
-            JOIN member                                                                                                 
-                ON member.id = job_member.member__id                                                                    
-     where member.grp__id = ? )                                                                                         
-        GROUP BY job.id, job.name, job.expire, job.usr__id, job.sched_time, job.priority, job.comp_time, job.tries, job.error_message, job.executing, job.story_instance__id, job.media_instance__id, job.class__id, job.failed, job.priority, job.sched_time, job.id
-        ORDER BY job.priority, job.sched_time, job.id
-};
+sub start_debug_mode {
+    shift->{mock_dbi}->mock(in_debug_mode => 1);
+    return '';
+}
+
+sub stop_debug_mode {
+    shift->{mock_dbi}->mock(in_debug_mode => DBI_DEBUG);
+    return '';
+}
+
+sub dump_test_data {
+    my $self = shift;
+    my $sql = "
+SELECT * 
+FROM job
+    JOIN job_member
+        ON job_member.object_id = job.id
+    JOIN member
+        ON member.id = job_member.member__id";
+    $self->start_debug_mode;
     my $dbh = prepare($sql);
-    $dbh->execute(@args);
-    my @tuples;
-    bind_columns($dbh, \@tuples[0..14]);
-    my $result;
-    while (fetch($dbh)) {
-        $result .= Dumper(\@tuples);
-    }
-    $dbh->finish;
-    return "$sql\n$result\n";
+    $dbh->execute();
+    $dbh->dump_results(80,"\n",",",*STDERR);
+    $self->stop_debug_mode;
 }
 
 1;
