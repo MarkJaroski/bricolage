@@ -56,7 +56,6 @@ sub test_setup : Test(setup) {
     $self->{mock_dbi}->mock(in_debug_mode => DBI_DEBUG);
     rollback;
     begin;
-    $self->deploy_templates;
 }
 
 sub test_teardown : Test(teardown) {
@@ -67,16 +66,15 @@ sub test_teardown : Test(teardown) {
 # Deploy the story and autohandler templates. During tests, they won't be
 # found because we're using a temporary directory.
 ##############################################################################
-sub deploy_templates {
+sub _deploy_templates : Test(3) {
     my @tmpl = Bric::Biz::Asset::Template->list({
         output_channel__id => 1,
         file_name          => ANY('/story.mc', '/autohandler'),
         Order              => 'file_name',
     });
-
-    my $burner = Bric::Util::Burner->new;
-    $burner->deploy($tmpl[0]);
-    $burner->deploy($tmpl[1]);
+    ok( my $burner = Bric::Util::Burner->new, "Get burner" );
+    ok( $burner->deploy($tmpl[0]), "Deploy autohandler template");
+    ok( $burner->deploy($tmpl[1]), "Deploy story template");
 }
 
 ##############################################################################
