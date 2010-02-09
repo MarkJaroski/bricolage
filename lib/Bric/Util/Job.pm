@@ -390,9 +390,9 @@ for a list of possible values.
 
 May pass in as an anonymous array of two values, the first the minimum
 completion time, the second the maximum completion time. If the first array
-item is undefined, then the second will be considered the date that sched_time
+item is undefined, then the second will be considered the date that comp_time
 must be less than. If the second array item is undefined, then the first will
-be considered the date that sched_time must be greater than. If the value
+be considered the date that comp_time must be greater than. If the value
 passed in is undefined, then the query will specify 'IS NULL'. May also use
 C<ANY> for a list of possible values.
 
