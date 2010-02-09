@@ -18,6 +18,7 @@ use Bric::Util::MediaType;
 use Bric::Biz::ElementType;
 use Bric::Biz::Asset::Business::Story;
 use Bric::Biz::Asset::Business::Media;
+use Bric::Biz::Asset::Business::Media::Image;
 use Bric::Util::Burner;
 use Bric::Biz::Person::User;
 use Bric::Biz::Asset::Template;
@@ -46,11 +47,18 @@ sub test_setup : Test(setup) {
     $self->{mock_job}->mock(commit => undef);
     $self->{mock_job}->mock(begin => undef);
     $self->{mock_job}->mock(rollback => undef);
-    $self->{mock_asset} = Test::MockModule->new('Bric::Biz::Asset::Business::Story');
-    $self->{mock_asset}->mock(commit_events => undef);
-    $self->{mock_asset}->mock(commit => undef);
-    $self->{mock_asset}->mock(begin => undef);
-    $self->{mock_asset}->mock(rollback => undef);
+    $self->{mock_story} 
+            = Test::MockModule->new('Bric::Biz::Asset::Business::Story');
+    $self->{mock_story}->mock(commit_events => undef);
+    $self->{mock_story}->mock(commit => undef);
+    $self->{mock_story}->mock(begin => undef);
+    $self->{mock_story}->mock(rollback => undef);
+    $self->{mock_media} 
+            = Test::MockModule->new('Bric::Biz::Asset::Business::Media');
+    $self->{mock_media}->mock(commit_events => undef);
+    $self->{mock_media}->mock(commit => undef);
+    $self->{mock_media}->mock(begin => undef);
+    $self->{mock_media}->mock(rollback => undef);
     # set up for possible debugging
     $self->{mock_dbi} = Test::MockModule->new('Bric::Util::DBI');
     $self->{mock_dbi}->mock(in_debug_mode => DBI_DEBUG);
@@ -59,7 +67,20 @@ sub test_setup : Test(setup) {
 }
 
 sub test_teardown : Test(teardown) {
+    my $self = shift;
     rollback;
+    $self->{mock_job}->unmock("commit_events");
+    $self->{mock_job}->unmock("commit");
+    $self->{mock_job}->unmock("begin");
+    $self->{mock_job}->unmock("rollback");
+    $self->{mock_story}->unmock("commit_events");
+    $self->{mock_story}->unmock("commit");
+    $self->{mock_story}->unmock("begin");
+    $self->{mock_story}->unmock("rollback");
+    $self->{mock_media}->unmock("commit_events");
+    $self->{mock_media}->unmock("commit");
+    $self->{mock_media}->unmock("begin");
+    $self->{mock_media}->unmock("rollback");
 }
 
 ##############################################################################
@@ -549,6 +570,118 @@ sub h_test_execute_me : Test(16) {
     is($job->has_failed, 0, 'The job should no loner be marked as failed');
 }
 
+# test listing of jobs by asset URI and name
+sub i_test_list_jobs_by_uri : Test(36) { # Plan: 3 cats * 6 assets * 2 tests
+    my $self = shift;
+    # FIXTURE
+    my @assets; 
+    my $dest = $self->build_destination;
+    foreach (0..2) { # will have three categories
+        local $TODO = "tests not written yet";
+        my $cat = $self->build_category;
+        foreach my $n (0..2) { # and three media and stories each 18 total
+            my %args = %job;
+            # two stories per category to excercise search by uri
+            push @assets, $self->build_story($cat);
+            $args{story_instance_id} = $assets[-1]->get_version_id;
+            my $job = Bric::Util::Job::Pub->new(\%args);
+            $job->save;
+            # and two media items per category to excercise search by uri
+            push @assets, $self->build_media($cat);
+            $args{media_instance_id} = $assets[-1]->get_version_id;
+            $job = Bric::Util::Job::Pub->new(\%args);
+            $job->save;
+        }
+    }
+    # TESTS
+    foreach my $asset (@assets) {
+        my $cat = $asset->get_primary_category;
+        my $name = $asset->get_name;
+        my $uri = $cat->get_uri . '%';
+        ok( my @jobs = Bric::Util::Job::Pub->list({ uri => $uri }),
+                    "List jobs by uri: " . $uri );
+        is( scalar @jobs, 6, "Count jobs by uri: " . $uri )
+                or $self->dump_test_data;
+    }
+}
+
+sub build_random_string {
+    my ($self, $length) = @_;
+    my @slice;
+    foreach (1..$length) { 
+        push @slice, rand 26; 
+    }
+    return join '', ('a'..'z')[@slice];
+}
+
+sub build_category {
+    my $dir = shift->build_random_string(20);
+    my $cat = Bric::Biz::Category->new({
+            name        => "test: $dir",
+            site_id     => 100,
+            description => 'for testing jobs',
+            parent_id   => 1,
+            directory   => "test_$dir",
+        });
+    $cat->save;
+    return $cat;
+}
+
+sub build_destination {
+    my ($oc) = Bric::Biz::OutputChannel->list();
+    my $dest = Bric::Dist::ServerType->new({ name        => 'Bogus',
+                                         move_method => 'File System',
+                                         site_id     => 100,
+                                       });
+    $dest->add_output_channels($oc); # this is crucial for publishing
+    $dest->save;
+    return $dest;
+}
+
+sub build_media {
+    my ($self, $cat) = @_;
+    my ($element) = Bric::Biz::ElementType->list({ name => 'Illustration' });
+    my $filename = $self->build_random_string(20);
+    my $image = Bric::Biz::Asset::Business::Media::Image->new({
+            name        => 'image_' . time,
+            file_name   => $filename,
+            element     => $element, 
+            priority    => 1,
+            category__id => $cat->get_id,
+            source__id  => 1,
+            user__id    => $self->user_id(),
+            description => '', # not important
+            site_id     => 100,
+    });
+    # No need to upload an actual image, it's the job that counts
+    $image->set_cover_date('2005-03-22 21:07:56'); # doesn't matter
+    # Now save the media.
+    $image->save;
+    return $image;
+}
+
+sub build_story {
+    my ($self,$cat) = @_;
+    my $time = time; # for the story name
+    my ($element) = Bric::Biz::ElementType->list({ name => 'Story' });
+    my $slug = $self->build_random_string(20);
+    my $story = Bric::Biz::Asset::Business::Story->new({
+            name        => "_test_$time",
+            description => 'this is a test',
+            priority    => 1,
+            source__id  => 1,
+            slug        => $slug,
+            user__id    => $self->user_id(),
+            element     => $element, 
+            site_id     => 100,
+        });
+    $story->add_categories([$cat]);
+    $story->set_primary_category($cat);
+    $story->set_cover_date('2005-03-22 21:07:56'); # doesn't matter
+    $story->save();
+    return $story;
+}
+
 sub start_debug_mode {
     shift->{mock_dbi}->mock(in_debug_mode => 1);
     return '';
@@ -561,17 +694,29 @@ sub stop_debug_mode {
 
 sub dump_test_data {
     my $self = shift;
-    my $sql = "
-SELECT * 
-FROM job
+    my $queries = [
+"SELECT * 
+ FROM job
     JOIN job_member
         ON job_member.object_id = job.id
     JOIN member
-        ON member.id = job_member.member__id";
+        ON member.id = job_member.member__id
+    LEFT JOIN story_instance                                                                                           
+        ON job.story_instance__id = story_instance.id                                             
+    LEFT JOIN media_instance
+        ON job.media_instance__id = media_instance.id
+    LEFT JOIN story_uri
+        ON story_instance.story__id = story_uri.story__id
+    LEFT JOIN media_uri
+        ON media_instance.media__id = media_uri.media__id
+"
+];
     $self->start_debug_mode;
-    my $dbh = prepare($sql);
-    $dbh->execute();
-    $dbh->dump_results(80,"\n",",",*STDERR);
+    foreach my $sql (@$queries) {
+        my $dbh = prepare($sql);
+        $dbh->execute();
+        $dbh->dump_results(80,"\n",",",*STDERR);
+    }
     $self->stop_debug_mode;
 }
 
