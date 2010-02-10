@@ -582,7 +582,7 @@ sub i_test_list_jobs_by_uri : Test(36) { # Plan: 3 cats * 6 assets * 2 tests
             my %args = %job;
             # two stories per category to excercise search by uri
             push @assets, $self->build_story($cat);
-            my $dest = $self->build_destination;
+            $self->build_destination;
             $args{story_instance_id} = $assets[-1]->get_version_id;
             my $job = Bric::Util::Job::Pub->new(\%args);
             $job->save;
@@ -621,7 +621,7 @@ sub j_test_list_jobs_by_scheduling_user : Test(4) {
     for (my $i = 0; $i < @users; $i++) {
         for (my $y = 0; $y < $i; $y++) {
             $args{user_id} = $users[$i]->get_id;
-            my $dest = $self->build_destination;
+            $self->build_destination;
             my $job = Bric::Util::Job::Pub->new(\%args);
             $job->save;
         }
@@ -637,15 +637,22 @@ sub j_test_list_jobs_by_scheduling_user : Test(4) {
 }
 
 sub k_test_locking : Test(1) {
-    $TODO = 'Check to make sure that jobs are locked while executing.';
+    my $self = shift;
     # The locking mechanism consists of a call to commit from the job
-    # XXX build all the stuff we need to build a job
-    # XXX build a job
-    # XXX remock Job::commit as a sub which checks job state for 'executing'
-    #          and then stores the result in the fixture somewhere
-    # XXX execute the job
-    # XXX TEST that commit has been called while the job was in an
-    #           'executing' state
+    # all the stuff we need to build a job
+    my %args = %job;
+    my $story = $self->build_story($self->build_category);
+    $args{story_instance_id} = $story->get_version_id;
+    $self->build_destination;
+    my $job = Bric::Util::Job::Pub->new(\%args);
+    $job->save;
+    # re-mock Job::commit as a sub which will die to assure us that 
+    # the job is locked
+    $self->{mock_job}->mock(
+            commit => sub { die if $self->get_executing });
+    dies_ok { $job->execute_me } "Check to see that commit is called "
+                             . "to lock the job while it's executing.";
+    $self->{mock_job}->mock(commit => undef);
 }
 
 sub build_random_string {
