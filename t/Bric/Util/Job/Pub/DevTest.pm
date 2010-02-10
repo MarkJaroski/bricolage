@@ -605,6 +605,27 @@ sub i_test_list_jobs_by_uri : Test(36) { # Plan: 3 cats * 6 assets * 2 tests
     }
 }
 
+sub j_test_list_jobs_by_scheduling_user : Test(4) {
+    $TODO = 'Build several test users, and have them run jobs.';
+    # XXX build four users
+    # XXX build all the stuff we need to build a job
+    # XXX build the same number of jobs as the index of the user
+    #        so user[0] gets no jobs, user[1] gets one, etc.
+    # XXX test list searching by each user
+}
+
+sub k_test_locking : Test(1) {
+    $TODO = 'Check to make sure that jobs are locked while executing.';
+    # The locking mechanism consists of a call to commit from the job
+    # XXX build all the stuff we need to build a job
+    # XXX build a job
+    # XXX remock Job::commit as a sub which checks job state for 'executing'
+    #          and then stores the result in the fixture somewhere
+    # XXX execute the job
+    # XXX TEST that commit has been called while the job was in an
+    #           'executing' state
+}
+
 sub build_random_string {
     my ($self, $length) = @_;
     my @slice;
