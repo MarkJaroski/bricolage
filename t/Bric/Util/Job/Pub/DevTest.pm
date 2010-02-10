@@ -575,7 +575,6 @@ sub i_test_list_jobs_by_uri : Test(36) { # Plan: 3 cats * 6 assets * 2 tests
     my $self = shift;
     # FIXTURE
     my @assets; 
-    my $dest = $self->build_destination;
     foreach (0..2) { # will have three categories
         local $TODO = "tests not written yet";
         my $cat = $self->build_category;
@@ -583,6 +582,7 @@ sub i_test_list_jobs_by_uri : Test(36) { # Plan: 3 cats * 6 assets * 2 tests
             my %args = %job;
             # two stories per category to excercise search by uri
             push @assets, $self->build_story($cat);
+            my $dest = $self->build_destination;
             $args{story_instance_id} = $assets[-1]->get_version_id;
             my $job = Bric::Util::Job::Pub->new(\%args);
             $job->save;
@@ -606,12 +606,34 @@ sub i_test_list_jobs_by_uri : Test(36) { # Plan: 3 cats * 6 assets * 2 tests
 }
 
 sub j_test_list_jobs_by_scheduling_user : Test(4) {
-    $TODO = 'Build several test users, and have them run jobs.';
-    # XXX build four users
-    # XXX build all the stuff we need to build a job
-    # XXX build the same number of jobs as the index of the user
+    my $self = shift;
+    # FIXTURE
+    my @users;
+    foreach (1..4) { # build 4 users
+        push @users, $self->build_user;
+    }
+    # all the stuff we need to build a job
+    my %args = %job;
+    my $story = $self->build_story($self->build_category);
+    $args{story_instance_id} = $story->get_version_id;
+    # build the same number of jobs as the index of the user
     #        so user[0] gets no jobs, user[1] gets one, etc.
-    # XXX test list searching by each user
+    for (my $i = 0; $i < @users; $i++) {
+        for (my $y = 0; $y < $i; $y++) {
+            $args{user_id} = $users[$i]->get_id;
+            my $dest = $self->build_destination;
+            my $job = Bric::Util::Job::Pub->new(\%args);
+            $job->save;
+        }
+    }
+    # TEST list searching by each user
+    for (my $i = 0; $i < @users; $i++) {
+        my @jobs = Bric::Util::Job::Pub->list({
+                    user_id => $users[$i]->get_id
+                });
+        is( scalar @jobs, $i, "Number of jobs scheduled by user id: " 
+                     . $users[$i]->get_id );
+    }
 }
 
 sub k_test_locking : Test(1) {
@@ -627,12 +649,25 @@ sub k_test_locking : Test(1) {
 }
 
 sub build_random_string {
-    my ($self, $length) = @_;
+    my $self = shift;
+    my $length = shift || 10;
     my @slice;
     foreach (1..$length) { 
         push @slice, rand 26; 
     }
     return join '', ('a'..'z')[@slice];
+}
+
+sub build_user {
+    my $self = shift;
+    my $user = Bric::Biz::Person::User->new({
+            lname => "User",
+            fname => "Test",
+            login => $self->build_random_string(10),
+        });
+    $user->set_password( $self->build_random_string(10) );
+    $user->save;
+    return $user;
 }
 
 sub build_category {
@@ -649,8 +684,9 @@ sub build_category {
 }
 
 sub build_destination {
+    my $self = shift;
     my ($oc) = Bric::Biz::OutputChannel->list();
-    my $dest = Bric::Dist::ServerType->new({ name        => 'Bogus',
+    my $dest = Bric::Dist::ServerType->new({ name => $self->build_random_string,
                                          move_method => 'File System',
                                          site_id     => 100,
                                        });
